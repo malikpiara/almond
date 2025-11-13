@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +30,7 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from '@/components/ui/input-group';
+import { generateEntryId } from '@/utils/utils';
 
 const formSchema = z.object({
   description: z
@@ -45,13 +47,6 @@ export default function Form() {
     },
   });
 
-  const entryList = [
-    `I’m grateful Margarida is here. I can be vulnerable with her and it’s so nice to have a coworking buddy and someone important by my side.
-
-I’m grateful I started reading and applying the ideas from the book “User Story Mapping”. And I’m grateful I managed to be humble enough to spend time with it even when I felt like I already knew everything… It just shows how much I don’t know.`,
-    'OMG that Ramen yesterday. And Yuna makes that place so much better. She’s so positive and friendly. I should have tipped generously and I will next time. ',
-  ];
-
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
@@ -62,7 +57,13 @@ I’m grateful I started reading and applying the ideas from the book “User St
   }, []);
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    const newEntries = [data.description, ...entries]; // Calculate new array
+    const newEntry = {
+      id: generateEntryId(),
+      content: data.description,
+      timestamp: Date.now(),
+      isDeleted: false,
+    };
+    const newEntries = [newEntry, ...entries];
     setEntries(newEntries); // Update React state
     localStorage.setItem('journal-entries', JSON.stringify(newEntries)); // Save to localStorage
 
@@ -80,6 +81,8 @@ I’m grateful I started reading and applying the ideas from the book “User St
         '--border-radius': 'calc(var(--radius)  + 4px)',
       } as React.CSSProperties,
     });
+
+    form.reset(); // clearing the form
   }
 
   return (
@@ -116,21 +119,18 @@ I’m grateful I started reading and applying the ideas from the book “User St
           />
         </FieldGroup>
         <Field orientation='horizontal'>
-          <Button
-            type='submit'
-            variant='outline'
-            form='form-rhf-demo'
-            //onClick={() => form.reset()}
-          >
+          <Button type='submit' variant='outline' form='form-rhf-demo'>
             Submit
           </Button>
         </Field>
       </form>
       <div className='flex flex-col space-y-4 w-full'>
-        {entries?.map((entry, index) => (
-          <Card key={index} className='rounded-md text-gray-800'>
-            <CardContent>{entry}</CardContent>
-            <CardFooter className='text-sm opacity-60'>Yesterday</CardFooter>
+        {entries?.map((entry) => (
+          <Card key={entry.id} className='rounded-md text-gray-800'>
+            <CardContent>{entry.content}</CardContent>
+            <CardFooter className='text-sm opacity-60'>
+              {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+            </CardFooter>
           </Card>
         ))}
       </div>
