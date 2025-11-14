@@ -35,6 +35,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -58,13 +60,17 @@ type Entry = {
   content: string;
   timestamp: number;
   isDeleted: boolean;
+  entities?: {
+    people: string[];
+    places: string[];
+  };
 };
 
 const formSchema = z.object({
   description: z
     .string()
     .min(10, 'Your answer must be at least 10 characters.')
-    .max(1000, 'Your answer must be at most 1000 characters.'),
+    .max(3000, 'Your answer must be at most 3000 characters.'),
 });
 
 export default function Form() {
@@ -76,6 +82,7 @@ export default function Form() {
   });
 
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     const savedData = localStorage.getItem('user-data');
@@ -123,32 +130,55 @@ export default function Form() {
     localStorage.setItem('user-data', JSON.stringify(updatedData));
   }
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
-    const savedData = localStorage.getItem('user-data');
-    const userData: UserData = savedData
-      ? JSON.parse(savedData)
-      : { boards: [], entries: [] };
-    const boardId = userData.boards[0].id;
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    setIsAnalyzing(true);
 
-    const newEntry: Entry = {
-      id: generateEntryId(),
-      boardId: boardId,
-      content: data.description,
-      // eslint-disable-next-line react-hooks/purity
-      timestamp: Date.now(),
-      isDeleted: false,
-    };
+    try {
+      // Extract entities from the journal entry
+      const response = await fetch('/api/extract-entities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: data.description }),
+      });
 
-    const updatedData: UserData = {
-      boards: userData.boards,
-      entries: [newEntry, ...userData.entries],
-    };
+      const entities = await response.json();
 
-    setEntries(updatedData.entries);
-    localStorage.setItem('user-data', JSON.stringify(updatedData));
+      const savedData = localStorage.getItem('user-data');
+      const userData: UserData = savedData
+        ? JSON.parse(savedData)
+        : { boards: [], entries: [] };
+      const boardId = userData.boards[0].id;
 
-    toast('Entry saved!');
-    form.reset();
+      const newEntry: Entry = {
+        id: generateEntryId(),
+        boardId: boardId,
+        content: data.description,
+        timestamp: Date.now(),
+        isDeleted: false,
+        entities: {
+          people: entities.people || [],
+          places: entities.places || [],
+        },
+      };
+
+      const updatedData: UserData = {
+        boards: userData.boards,
+        entries: [newEntry, ...userData.entries],
+      };
+
+      setEntries(updatedData.entries);
+      localStorage.setItem('user-data', JSON.stringify(updatedData));
+
+      toast('Entry saved!');
+      form.reset();
+    } catch (error) {
+      console.error('Error saving entry:', error);
+      toast('Error saving entry');
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
 
   return (
@@ -171,7 +201,7 @@ export default function Form() {
                   <InputGroupTextarea
                     {...field}
                     id='form-rhf-demo-description'
-                    placeholder='Take a moment to reflect — what’s something you feel grateful for today?'
+                    placeholder={`Take a moment to reflect — what's something you feel grateful for today?`}
                     className='min-h-32 resize-none rounded-lg bg-white !text-lg'
                     aria-invalid={fieldState.invalid}
                   />
@@ -185,8 +215,13 @@ export default function Form() {
           />
         </FieldGroup>
         <Field orientation='horizontal'>
-          <Button type='submit' variant='outline' form='form-rhf-demo'>
-            Submit
+          <Button
+            type='submit'
+            variant='outline'
+            form='form-rhf-demo'
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Submit'}
           </Button>
         </Field>
       </form>
@@ -198,6 +233,7 @@ export default function Form() {
               <CardContent className='whitespace-pre-line'>
                 {entry.content}
               </CardContent>
+
               <CardFooter className='text-sm opacity-60 justify-between'>
                 {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
                 <div>
@@ -208,11 +244,29 @@ export default function Form() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className='w-56'>
+                      <DropdownMenuLabel>People</DropdownMenuLabel>
+
+                      {entry.entities?.people?.map((person, index) => (
+                        <DropdownMenuItem key={index}>
+                          {person}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Places</DropdownMenuLabel>
+
+                      {entry.entities?.places?.map((places, index) => (
+                        <DropdownMenuItem key={index}>
+                          {places}
+                        </DropdownMenuItem>
+                      ))}
+
+                      <DropdownMenuSeparator />
+
                       <DropdownMenuItem
                         className='cursor-pointer'
                         onClick={() => deleteEntry(entry.id)}
                       >
-                        Delete
+                        Delete this entry
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
