@@ -30,7 +30,7 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from '@/components/ui/input-group';
-import { generateEntryId } from '@/utils/utils';
+import { generateBoardId, generateEntryId } from '@/utils/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { MoreHorizontalIcon } from 'lucide-react';
+
+type UserData = {
+  boards: Board[];
+  entries: Entry[];
+};
 
 type Board = {
   id: string;
@@ -73,52 +78,77 @@ export default function Form() {
   const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
-    const savedEntries = localStorage.getItem('journal-entries');
-    if (savedEntries) {
-      setEntries(JSON.parse(savedEntries));
+    const savedData = localStorage.getItem('user-data');
+
+    if (savedData) {
+      const data: UserData = JSON.parse(savedData);
+      setEntries(data.entries);
+    } else {
+      // First time - create default board
+      const defaultBoard: Board = {
+        id: generateBoardId(),
+        prompt: 'What are you grateful for today?',
+        createdAt: Date.now(),
+        isDeleted: false,
+      };
+
+      const initialData: UserData = {
+        boards: [defaultBoard],
+        entries: [],
+      };
+
+      localStorage.setItem('user-data', JSON.stringify(initialData));
     }
   }, []);
 
   function deleteEntry(id: string) {
-    const updatedEntries = entries.map((entry) => {
+    const savedData = localStorage.getItem('user-data');
+    const userData: UserData = savedData
+      ? JSON.parse(savedData)
+      : { boards: [], entries: [] };
+
+    const updatedEntries = userData.entries.map((entry) => {
       if (entry.id === id) {
         return { ...entry, isDeleted: true };
       }
       return entry;
     });
 
-    setEntries(updatedEntries);
-    localStorage.setItem('journal-entries', JSON.stringify(updatedEntries));
+    const updatedData: UserData = {
+      boards: userData.boards,
+      entries: updatedEntries,
+    };
+
+    setEntries(updatedData.entries);
+    localStorage.setItem('user-data', JSON.stringify(updatedData));
   }
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    const newEntry = {
+    const savedData = localStorage.getItem('user-data');
+    const userData: UserData = savedData
+      ? JSON.parse(savedData)
+      : { boards: [], entries: [] };
+    const boardId = userData.boards[0].id;
+
+    const newEntry: Entry = {
       id: generateEntryId(),
+      boardId: boardId,
       content: data.description,
       // eslint-disable-next-line react-hooks/purity
       timestamp: Date.now(),
       isDeleted: false,
     };
-    const newEntries = [newEntry, ...entries];
-    setEntries(newEntries); // Update React state
-    localStorage.setItem('journal-entries', JSON.stringify(newEntries)); // Save to localStorage
 
-    toast('You submitted the following values:', {
-      description: (
-        <pre className='bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4'>
-          <code>{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
-      position: 'bottom-right',
-      classNames: {
-        content: 'flex flex-col gap-2',
-      },
-      style: {
-        '--border-radius': 'calc(var(--radius)  + 4px)',
-      } as React.CSSProperties,
-    });
+    const updatedData: UserData = {
+      boards: userData.boards,
+      entries: [newEntry, ...userData.entries],
+    };
 
-    form.reset(); // clearing the form
+    setEntries(updatedData.entries);
+    localStorage.setItem('user-data', JSON.stringify(updatedData));
+
+    toast('Entry saved!');
+    form.reset();
   }
 
   return (
