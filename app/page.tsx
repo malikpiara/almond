@@ -40,8 +40,16 @@ import {
 
 import { MoreHorizontalIcon } from 'lucide-react';
 
+type Board = {
+  id: string;
+  prompt: string;
+  createdAt: number; // This is essentially just a timestamp.
+  isDeleted: boolean;
+};
+
 type Entry = {
   id: string;
+  boardId: string;
   content: string;
   timestamp: number;
   isDeleted: boolean;

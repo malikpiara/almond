@@ -7,3 +7,8 @@ export function generateEntryId() {
   return 'entry_' + generateShortId();
   // Result: something like "entry_k3j5h2m9x4a"
 }
+
+export function generateBoardId() {
+  return 'board_' + generateShortId();
+  // Result: something like "board_k3j5h2m9x4a"
+}
