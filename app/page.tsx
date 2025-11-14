@@ -195,7 +195,9 @@ export default function Form() {
           ?.filter((entry) => !entry.isDeleted)
           .map((entry) => (
             <Card key={entry.id} className='rounded-md text-gray-800'>
-              <CardContent>{entry.content}</CardContent>
+              <CardContent className='whitespace-pre-line'>
+                {entry.content}
+              </CardContent>
               <CardFooter className='text-sm opacity-60 justify-between'>
                 {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
                 <div>
