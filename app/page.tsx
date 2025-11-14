@@ -31,6 +31,21 @@ import {
   InputGroupTextarea,
 } from '@/components/ui/input-group';
 import { generateEntryId } from '@/utils/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+import { MoreHorizontalIcon } from 'lucide-react';
+
+type Entry = {
+  id: string;
+  content: string;
+  timestamp: number;
+  isDeleted: boolean;
+};
 
 const formSchema = z.object({
   description: z
@@ -47,7 +62,7 @@ export default function Form() {
     },
   });
 
-  const [entries, setEntries] = useState([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
     const savedEntries = localStorage.getItem('journal-entries');
@@ -56,10 +71,23 @@ export default function Form() {
     }
   }, []);
 
+  function deleteEntry(id: string) {
+    const updatedEntries = entries.map((entry) => {
+      if (entry.id === id) {
+        return { ...entry, isDeleted: true };
+      }
+      return entry;
+    });
+
+    setEntries(updatedEntries);
+    localStorage.setItem('journal-entries', JSON.stringify(updatedEntries));
+  }
+
   function onSubmit(data: z.infer<typeof formSchema>) {
     const newEntry = {
       id: generateEntryId(),
       content: data.description,
+      // eslint-disable-next-line react-hooks/purity
       timestamp: Date.now(),
       isDeleted: false,
     };
@@ -125,14 +153,33 @@ export default function Form() {
         </Field>
       </form>
       <div className='flex flex-col space-y-4 w-full'>
-        {entries?.map((entry) => (
-          <Card key={entry.id} className='rounded-md text-gray-800'>
-            <CardContent>{entry.content}</CardContent>
-            <CardFooter className='text-sm opacity-60'>
-              {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
-            </CardFooter>
-          </Card>
-        ))}
+        {entries
+          ?.filter((entry) => !entry.isDeleted)
+          .map((entry) => (
+            <Card key={entry.id} className='rounded-md text-gray-800'>
+              <CardContent>{entry.content}</CardContent>
+              <CardFooter className='text-sm opacity-60 justify-between'>
+                {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+                <div>
+                  <DropdownMenu modal={true}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant='ghost' className='cursor-pointer'>
+                        <MoreHorizontalIcon />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className='w-56'>
+                      <DropdownMenuItem
+                        className='cursor-pointer'
+                        onClick={() => deleteEntry(entry.id)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
       </div>
     </div>
   );
