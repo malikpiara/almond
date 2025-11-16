@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// We are using Claude Haiku 3 since I think
-// that model is good enough for everything we need.
-// I think it would be sensible to consider using a local model instead of making an API call.
-
 export async function POST(req: NextRequest) {
   try {
     const { text } = await req.json();
@@ -16,7 +12,7 @@ export async function POST(req: NextRequest) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         messages: [
           {
