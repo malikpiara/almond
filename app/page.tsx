@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -30,7 +29,12 @@ import {
   InputGroupText,
   InputGroupTextarea,
 } from '@/components/ui/input-group';
-import { generateBoardId, generateEntryId } from '@/utils/utils';
+import {
+  ExportData,
+  generateBoardId,
+  generateEntryId,
+  ImportData,
+} from '@/utils/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -225,7 +229,7 @@ export default function Form() {
           </Button>
         </Field>
       </form>
-      <div className='flex flex-col space-y-4 w-full'>
+      <section id='entries' className='flex flex-col space-y-4 w-full'>
         {entries
           ?.filter((entry) => !entry.isDeleted)
           .map((entry) => (
@@ -274,7 +278,27 @@ export default function Form() {
               </CardFooter>
             </Card>
           ))}
-      </div>
+      </section>
+      <section id='import-export' className='fixed right-2 bottom-2'>
+        <Button
+          variant='ghost'
+          className='cursor-pointer'
+          onClick={() => ImportData()}
+        >
+          Import
+        </Button>
+
+        <Button
+          variant='ghost'
+          className='cursor-pointer'
+          onClick={() => {
+            const result = ExportData();
+            toast(result.message);
+          }}
+        >
+          Export
+        </Button>
+      </section>
     </div>
   );
 }
