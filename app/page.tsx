@@ -291,8 +291,8 @@ export default function Form() {
         <Button
           variant='ghost'
           className='cursor-pointer'
-          onClick={() => {
-            const result = ExportData();
+          onClick={async () => {
+            const result = await ExportData();
             toast(result.message);
           }}
         >
