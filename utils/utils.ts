@@ -19,7 +19,7 @@ export function generateBoardId() {
   // Result: something like "board_k3j5h2m9x4a"
 }
 
-export async function ExportData() {
+export async function ExportData(password: string) {
   // 1. Get data from localStorage
   const data = localStorage.getItem('user-data');
 
@@ -31,11 +31,6 @@ export async function ExportData() {
     };
   }
 
-  // Prompt for password
-  const suggested = generatePassphrase();
-  const password = prompt(
-    `Pick a passphrase to keep your stories safe.\n\nSuggested: ${suggested}`
-  );
   if (!password) {
     return { success: false, message: 'Export cancelled - password required' };
   }
@@ -60,7 +55,17 @@ export async function ExportData() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `backup-${Date.now()}.almond`; // Filename with timestamp
+
+    const date = new Date();
+    const month = date
+      .toLocaleDateString('en-US', { month: 'short' })
+      .toLowerCase();
+    const day = date.getDate();
+    const hour = date.getHours().toString().padStart(2, '0');
+    const min = date.getMinutes().toString().padStart(2, '0');
+    const year = date.getFullYear();
+    link.download = `backup-${month}-${day}-${year}-${hour}${min}.almond`;
+    // Result: "backup-nov-17-2025-1520.almond"
 
     // 4. Click it programmatically
     document.body.appendChild(link);
@@ -82,7 +87,7 @@ export async function ExportData() {
 export function ImportData() {
   const fileWidget = document.createElement('input');
   fileWidget.type = 'file';
-  fileWidget.accept = '.json'; // Only allow JSON files
+  fileWidget.accept = '.almond'; // Only allow Almond files
 
   // Listen for when user selects a file
   fileWidget.onchange = async (e) => {

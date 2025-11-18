@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { MoreHorizontalIcon } from 'lucide-react';
+import { ExportModal } from '@/components/export-modal';
 
 type UserData = {
   boards: Board[];
@@ -87,6 +88,7 @@ export default function Form() {
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   useEffect(() => {
     const savedData = localStorage.getItem('user-data');
@@ -184,6 +186,12 @@ export default function Form() {
       setIsAnalyzing(false);
     }
   }
+
+  const handleExportConfirm = async (password: string) => {
+    const result = await ExportData(password);
+    toast(result.message);
+    setExportModalOpen(false);
+  };
 
   return (
     <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12'>
@@ -291,14 +299,17 @@ export default function Form() {
         <Button
           variant='ghost'
           className='cursor-pointer'
-          onClick={async () => {
-            const result = await ExportData();
-            toast(result.message);
-          }}
+          onClick={() => setExportModalOpen(true)}
         >
           Export
         </Button>
       </section>
+
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        onConfirm={handleExportConfirm}
+      />
     </div>
   );
 }
