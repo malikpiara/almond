@@ -13,7 +13,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 export default function Boards() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -50,7 +50,7 @@ export default function Boards() {
   }, []);
   return (
     <div className='max-w-4xl flex flex-col min-h-screen gap-8 px-8'>
-      <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+      <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-10'>
         Your Journals
       </h1>
       <section id='boards' className='grid grid-cols-2 gap-4'>
@@ -76,7 +76,7 @@ export default function Boards() {
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className='w-80 space-y-4'
+          className='w-md space-y-4'
           sideOffset={5}
           alignOffset={5}
           side='top'
@@ -85,11 +85,11 @@ export default function Boards() {
           <div className='space-y-2'>
             <h4 className='leading-none font-medium'>Create a new journal</h4>
             <p className='text-muted-foreground text-sm'>
-              Pick a prompt to answer daily.
+              Pick a prompt to answer daily or use one of our templates.
             </p>
           </div>
-          <div className='grid gap-2'>
-            <div className='items-center gap-4'>
+          <div>
+            <div>
               <Input
                 value={newPrompt}
                 onChange={(e) => setNewPrompt(e.target.value)}
@@ -98,7 +98,7 @@ export default function Boards() {
             </div>
           </div>
           <Button
-            className='cursor-pointer  bg-gray-700 hover:bg-gray-600'
+            className='cursor-pointer  bg-gray-700 hover:bg-gray-600 rounded-lg'
             onClick={() => {
               const newBoard: Board = {
                 id: generateBoardId(),
@@ -120,13 +120,45 @@ export default function Boards() {
               setBoards(updatedData.boards);
               localStorage.setItem('user-data', JSON.stringify(updatedData));
 
+              setIsPopoverOpen(false);
+
               toast('Board created!');
             }}
           >
             + Create New Journal
           </Button>
+          <Separator className='my-4' />
+          {templatePrompts.map((prompt, index) => {
+            return (
+              <div
+                key={index}
+                className='items-center grid grid-cols-3 my-2 group'
+              >
+                <div className='text-sm col-span-2 text-muted-foreground group-hover:text-gray-900'>
+                  {prompt}
+                </div>
+                <Button
+                  variant={'secondary'}
+                  size={'sm'}
+                  onClick={() => {
+                    setNewPrompt(prompt);
+                  }}
+                  className='rounded-full bg-[#FFFBEA] text-[#83591e] px-5 hover:bg-amber-100 transition-colors max-w-28 justify-self-end cursor-pointer'
+                >
+                  Add
+                </Button>
+              </div>
+            );
+          })}
         </PopoverContent>
       </Popover>
     </div>
   );
 }
+
+const templatePrompts = [
+  'What are you grateful for today?',
+  'What is your priority for today?',
+  'What would you like to accomplish today?',
+  'What good have you done today?',
+];
