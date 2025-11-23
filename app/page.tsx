@@ -6,34 +6,18 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { ImportModal } from '@/components/import-modal';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Field, FieldError, FieldGroup } from '@/components/ui/field';
+import { InputGroup, InputGroupTextarea } from '@/components/ui/input-group';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
-  InputGroupTextarea,
-} from '@/components/ui/input-group';
-import {
-  ExportData,
+  exportData,
   generateBoardId,
   generateEntryId,
-  ImportData,
+  importData,
+  selectImportFile,
 } from '@/utils/utils';
 import {
   DropdownMenu,
@@ -89,6 +73,9 @@ export default function Form() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     const savedData = localStorage.getItem('user-data');
@@ -188,9 +175,24 @@ export default function Form() {
   }
 
   const handleExportConfirm = async (password: string) => {
-    const result = await ExportData(password);
+    const result = await exportData(password);
     toast(result.message);
     setExportModalOpen(false);
+  };
+
+  const handleImportConfirm = async (password: string) => {
+    if (!selectedFile) return;
+
+    const result = await importData(selectedFile, password);
+
+    if (result.success) {
+      toast.success(result.message);
+      setImportModalOpen(false);
+      window.location.reload(); // Reload to show the imported data
+    } else {
+      toast.error(result.message);
+      // Modal stays open for retry
+    }
   };
 
   return (
@@ -291,7 +293,13 @@ export default function Form() {
         <Button
           variant='ghost'
           className='cursor-pointer'
-          onClick={() => ImportData()}
+          onClick={async () => {
+            const file = await selectImportFile();
+            if (file) {
+              setSelectedFile(file);
+              setImportModalOpen(true);
+            }
+          }}
         >
           Import
         </Button>
@@ -309,6 +317,12 @@ export default function Form() {
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
         onConfirm={handleExportConfirm}
+      />
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        file={selectedFile}
+        onConfirm={handleImportConfirm}
       />
     </div>
   );
