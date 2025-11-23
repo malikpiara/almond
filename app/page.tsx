@@ -1,88 +1,36 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import * as z from 'zod';
-import { useEffect, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { ImportModal } from '@/components/import-modal';
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Field, FieldError, FieldGroup } from '@/components/ui/field';
-import { InputGroup, InputGroupTextarea } from '@/components/ui/input-group';
+import { Card, CardContent } from '@/components/ui/card';
+import { generateBoardId } from '@/utils/utils';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { UserData, Board } from '@/types';
 import {
-  exportData,
-  generateBoardId,
-  generateEntryId,
-  importData,
-  selectImportFile,
-} from '@/utils/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
-import { MoreHorizontalIcon } from 'lucide-react';
-import { ExportModal } from '@/components/export-modal';
+export default function Boards() {
+  const [boards, setBoards] = useState<Board[]>([]);
 
-type UserData = {
-  boards: Board[];
-  entries: Entry[];
-};
+  const [newPrompt, setNewPrompt] = useState(
+    'What are you grateful for today?'
+  );
 
-type Board = {
-  id: string;
-  prompt: string;
-  createdAt: number; // This is essentially just a timestamp.
-  isDeleted: boolean;
-};
-
-type Entry = {
-  id: string;
-  boardId: string;
-  content: string;
-  timestamp: number;
-  isDeleted: boolean;
-  entities?: {
-    people: string[];
-    places: string[];
-  };
-};
-
-const formSchema = z.object({
-  description: z
-    .string()
-    .min(10, 'Your answer must be at least 10 characters.')
-    .max(3000, 'Your answer must be at most 3000 characters.'),
-});
-
-export default function Form() {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      description: '',
-    },
-  });
-
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   useEffect(() => {
     const savedData = localStorage.getItem('user-data');
 
     if (savedData) {
       const data: UserData = JSON.parse(savedData);
-      setEntries(data.entries);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBoards(data.boards);
     } else {
       // First time - create default board
       const defaultBoard: Board = {
@@ -100,230 +48,85 @@ export default function Form() {
       localStorage.setItem('user-data', JSON.stringify(initialData));
     }
   }, []);
-
-  function deleteEntry(id: string) {
-    const savedData = localStorage.getItem('user-data');
-    const userData: UserData = savedData
-      ? JSON.parse(savedData)
-      : { boards: [], entries: [] };
-
-    const updatedEntries = userData.entries.map((entry) => {
-      if (entry.id === id) {
-        return { ...entry, isDeleted: true };
-      }
-      return entry;
-    });
-
-    const updatedData: UserData = {
-      boards: userData.boards,
-      entries: updatedEntries,
-    };
-
-    setEntries(updatedData.entries);
-    localStorage.setItem('user-data', JSON.stringify(updatedData));
-  }
-
-  async function onSubmit(data: z.infer<typeof formSchema>) {
-    setIsAnalyzing(true);
-
-    try {
-      // Extract entities from the journal entry
-      const response = await fetch('/api/extract-entities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: data.description }),
-      });
-
-      const entities = await response.json();
-
-      const savedData = localStorage.getItem('user-data');
-      const userData: UserData = savedData
-        ? JSON.parse(savedData)
-        : { boards: [], entries: [] };
-      const boardId = userData.boards[0].id;
-
-      const newEntry: Entry = {
-        id: generateEntryId(),
-        boardId: boardId,
-        content: data.description,
-        timestamp: Date.now(),
-        isDeleted: false,
-        entities: {
-          people: entities.people || [],
-          places: entities.places || [],
-        },
-      };
-
-      const updatedData: UserData = {
-        boards: userData.boards,
-        entries: [newEntry, ...userData.entries],
-      };
-
-      setEntries(updatedData.entries);
-      localStorage.setItem('user-data', JSON.stringify(updatedData));
-
-      toast('Entry saved!');
-      form.reset();
-    } catch (error) {
-      console.error('Error saving entry:', error);
-      toast('Error saving entry');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }
-
-  const handleExportConfirm = async (password: string) => {
-    const result = await exportData(password);
-    toast(result.message);
-    setExportModalOpen(false);
-  };
-
-  const handleImportConfirm = async (password: string) => {
-    if (!selectedFile) return;
-
-    const result = await importData(selectedFile, password);
-
-    if (result.success) {
-      toast.success(result.message);
-      setImportModalOpen(false);
-      window.location.reload(); // Reload to show the imported data
-    } else {
-      toast.error(result.message);
-      // Modal stays open for retry
-    }
-  };
-
   return (
-    <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12'>
-      <form
-        id='form-rhf-demo'
-        className='space-y-4 w-full'
-        onSubmit={form.handleSubmit(onSubmit)}
-      >
-        <FieldGroup>
-          <Controller
-            name='description'
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
-                  What are you grateful for today?
-                </h1>
-                <InputGroup>
-                  <InputGroupTextarea
-                    {...field}
-                    id='form-rhf-demo-description'
-                    placeholder={`Take a moment to reflect — what's something you feel grateful for today?`}
-                    className='min-h-32 resize-none rounded-lg bg-white !text-lg'
-                    aria-invalid={fieldState.invalid}
-                  />
-                </InputGroup>
-
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
-            )}
-          />
-        </FieldGroup>
-        <Field orientation='horizontal'>
-          <Button
-            type='submit'
-            variant='outline'
-            form='form-rhf-demo'
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? 'Analyzing...' : 'Submit'}
-          </Button>
-        </Field>
-      </form>
-      <section id='entries' className='flex flex-col space-y-4 w-full'>
-        {entries
-          ?.filter((entry) => !entry.isDeleted)
-          .map((entry) => (
-            <Card key={entry.id} className='rounded-md text-gray-800'>
-              <CardContent className='whitespace-pre-line'>
-                {entry.content}
-              </CardContent>
-
-              <CardFooter className='text-sm opacity-60 justify-between'>
-                {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
-                <div>
-                  <DropdownMenu modal={true}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant='ghost' className='cursor-pointer'>
-                        <MoreHorizontalIcon />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='w-56'>
-                      <DropdownMenuLabel>People</DropdownMenuLabel>
-
-                      {entry.entities?.people?.map((person, index) => (
-                        <DropdownMenuItem key={index}>
-                          {person}
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Places</DropdownMenuLabel>
-
-                      {entry.entities?.places?.map((places, index) => (
-                        <DropdownMenuItem key={index}>
-                          {places}
-                        </DropdownMenuItem>
-                      ))}
-
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        className='cursor-pointer'
-                        onClick={() => deleteEntry(entry.id)}
-                      >
-                        Delete this entry
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardFooter>
-            </Card>
+    <div className='max-w-4xl flex flex-col min-h-screen gap-8 px-8'>
+      <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+        Your Journals
+      </h1>
+      <section id='boards' className='grid grid-cols-2 gap-4'>
+        {boards
+          ?.filter((board) => !board.isDeleted)
+          .map((board) => (
+            <Link key={board.id} href={`boards/${board.id}`}>
+              <Card className='rounded-md text-gray-800 w-92 h-24'>
+                <CardContent>{board.prompt}</CardContent>
+              </Card>
+            </Link>
           ))}
       </section>
-      <section id='import-export' className='fixed right-2 bottom-2'>
-        <Button
-          variant='ghost'
-          className='cursor-pointer'
-          onClick={async () => {
-            const file = await selectImportFile();
-            if (file) {
-              setSelectedFile(file);
-              setImportModalOpen(true);
-            }
-          }}
-        >
-          Import
-        </Button>
 
-        <Button
-          variant='ghost'
-          className='cursor-pointer'
-          onClick={() => setExportModalOpen(true)}
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant='outline'
+            size={'icon-lg'}
+            className='fixed bottom-6 left-6 rounded-full cursor-pointer'
+          >
+            +
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className='w-80 space-y-4'
+          sideOffset={5}
+          alignOffset={5}
+          side='top'
+          align='start'
         >
-          Export
-        </Button>
-      </section>
+          <div className='space-y-2'>
+            <h4 className='leading-none font-medium'>Create a new journal</h4>
+            <p className='text-muted-foreground text-sm'>
+              Pick a prompt to answer daily.
+            </p>
+          </div>
+          <div className='grid gap-2'>
+            <div className='items-center gap-4'>
+              <Input
+                value={newPrompt}
+                onChange={(e) => setNewPrompt(e.target.value)}
+                className='col-span-2 h-8'
+              />
+            </div>
+          </div>
+          <Button
+            className='cursor-pointer  bg-gray-700 hover:bg-gray-600'
+            onClick={() => {
+              const newBoard: Board = {
+                id: generateBoardId(),
+                prompt: newPrompt,
+                createdAt: Date.now(),
+                isDeleted: false,
+              };
 
-      <ExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        onConfirm={handleExportConfirm}
-      />
-      <ImportModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        file={selectedFile}
-        onConfirm={handleImportConfirm}
-      />
+              const savedData = localStorage.getItem('user-data');
+              const userData: UserData = savedData
+                ? JSON.parse(savedData)
+                : { boards: [], entries: [] };
+
+              const updatedData: UserData = {
+                boards: [...userData.boards, newBoard],
+                entries: [...userData.entries],
+              };
+
+              setBoards(updatedData.boards);
+              localStorage.setItem('user-data', JSON.stringify(updatedData));
+
+              toast('Board created!');
+            }}
+          >
+            + Create New Journal
+          </Button>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
