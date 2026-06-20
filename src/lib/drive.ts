@@ -26,6 +26,10 @@ const FILE_NAME = 'almond.enc';
 const CONNECTED_KEY = 'almond-drive-connected';
 const PASS_KEY = 'almond-drive-passphrase';
 const LAST_SYNC_KEY = 'almond-drive-last-sync';
+// The connected account's email, used as a token-request `hint` so an
+// already-connected device re-acquires tokens silently (no account chooser)
+// even when several Google accounts are signed in.
+const EMAIL_KEY = 'almond-drive-email';
 
 export type SyncResult = {
   ok: boolean;
@@ -59,6 +63,7 @@ export function lastSync(): number | null {
 export function disconnect(): void {
   localStorage.removeItem(CONNECTED_KEY);
   localStorage.removeItem(PASS_KEY);
+  localStorage.removeItem(EMAIL_KEY);
   accessToken = null;
 }
 
@@ -135,7 +140,11 @@ function requestToken(interactive: boolean): Promise<string> {
   ensureClient();
   return new Promise((resolve, reject) => {
     pending = { resolve, reject };
-    tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    const email = localStorage.getItem(EMAIL_KEY);
+    tokenClient.requestAccessToken({
+      prompt: interactive ? 'consent' : '',
+      ...(email ? { hint: email } : {}),
+    });
   });
 }
 
@@ -202,6 +211,23 @@ async function updateFile(
   if (!res.ok) throw new Error(`drive-update-${res.status}`);
 }
 
+/** Capture the connected account's email once (via the Drive `about` endpoint,
+ *  no extra scope) so future token requests can hint it and stay silent. */
+async function ensureEmail(token: string): Promise<void> {
+  if (localStorage.getItem(EMAIL_KEY)) return;
+  try {
+    const res = await fetch(`${API}/about?fields=user(emailAddress)`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const email = data.user?.emailAddress;
+    if (email) localStorage.setItem(EMAIL_KEY, email);
+  } catch {
+    // best-effort; without it we just fall back to the account chooser
+  }
+}
+
 // --- Sync orchestration -----------------------------------------------------
 
 /**
@@ -222,6 +248,7 @@ export async function sync(interactive = false): Promise<SyncResult> {
   }
 
   try {
+    await ensureEmail(token);
     const id = await findFileId(token);
     let remote: UserData | null = null;
     if (id) {

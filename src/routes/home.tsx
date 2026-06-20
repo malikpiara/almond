@@ -37,14 +37,14 @@ export function Home() {
   }
 
   return (
-    <div className='max-w-4xl flex flex-col min-h-screen gap-8 px-8'>
-      <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-10'>
+    <div className='max-w-4xl mx-auto flex flex-col min-h-screen gap-6 px-6 sm:px-8 pb-28'>
+      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-4 bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
         Your Journals
       </h1>
-      <section id='boards' className='grid grid-cols-2 gap-4'>
+      <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (
           <Link key={board.id} to='/boards/$id' params={{ id: board.id }}>
-            <Card className='rounded-md text-gray-800 w-92 h-24'>
+            <Card className='rounded-md text-gray-800 w-full h-24'>
               <CardContent>{board.prompt}</CardContent>
             </Card>
           </Link>
