@@ -96,8 +96,13 @@ export function Home() {
       </h1>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (
-          <Link key={board.id} to='/boards/$id' params={{ id: board.id }}>
-            <Card className='text-gray-800 w-full min-h-24'>
+          <Link
+            key={board.id}
+            to='/boards/$id'
+            params={{ id: board.id }}
+            viewTransition={{ types: ['slide-forward'] }}
+          >
+            <Card className='text-gray-800 w-full min-h-24 transition-[transform,box-shadow] duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]'>
               <CardContent>{board.prompt}</CardContent>
             </Card>
           </Link>

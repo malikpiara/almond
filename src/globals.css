@@ -30,6 +30,53 @@ html {
   animation: entry-appear 260ms var(--ease-out-cubic) both;
 }
 
+/* Directional route slide via the View Transitions API — mirrors the swipe-back
+   so tap-forward (open a journal) and tap-back (return to journals) feel like
+   one spatial model. The on-top screen slides over a 30% parallax of the other. */
+@keyframes vt-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes vt-out-left {
+  to {
+    transform: translateX(-30%);
+  }
+}
+@keyframes vt-in-left {
+  from {
+    transform: translateX(-30%);
+  }
+}
+@keyframes vt-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--ease-out-cubic);
+}
+
+html:active-view-transition-type(slide-forward)::view-transition-old(root) {
+  animation-name: vt-out-left;
+  z-index: 0;
+}
+html:active-view-transition-type(slide-forward)::view-transition-new(root) {
+  animation-name: vt-in-right;
+  z-index: 1;
+}
+html:active-view-transition-type(slide-back)::view-transition-old(root) {
+  animation-name: vt-out-right;
+  z-index: 1;
+}
+html:active-view-transition-type(slide-back)::view-transition-new(root) {
+  animation-name: vt-in-left;
+  z-index: 0;
+}
+
 /* Respect users who ask for less motion: neutralize transitions/animations
    app-wide (covers Radix/vaul too). Gesture-driven direct manipulation stays. */
 @media (prefers-reduced-motion: reduce) {
@@ -40,6 +87,11 @@ html {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 

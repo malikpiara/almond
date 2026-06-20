@@ -211,6 +211,7 @@ export function Board() {
           <Link
             to='/journals'
             aria-label='Back to journals'
+            viewTransition={{ types: ['slide-back'] }}
             className='shrink-0 p-1 text-gray-500 hover:text-gray-800 cursor-pointer'
           >
             <ArrowLeft className='h-5 w-5' />
@@ -367,6 +368,7 @@ export function Board() {
     <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'>
       <Link
         to='/journals'
+        viewTransition={{ types: ['slide-back'] }}
         className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
       >
         ← Journals

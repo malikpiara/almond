@@ -189,7 +189,9 @@ Almond is opened occasionally, so motion adds warmth without fatigue. Following 
 - **Easing**: `ease-out` for enter/exit (tokens `--ease-out-cubic`, `--ease-out-quart` in `globals.css`); durations 150–300ms; animate **transform/opacity only**.
 - **New entry** animates in with `.animate-entry-appear` (fade + 8px rise, 260ms ease-out) — applied only to the just-saved entry (`justAddedId`), not the whole list.
 - **Buttons** get a press `active:scale-[0.97]` (in the Button base) for tactile feedback.
-- **Swipe-back** is gesture-driven (direct manipulation) with a spring-ish snap; see the mobile-board notes.
+- **Route transitions** use the **View Transitions API** (TanStack Router `viewTransition` + types): tapping a journal slides the board in from the right (`slide-forward`), tapping back slides it off (`slide-back`), with a 30% parallax — mirroring the swipe-back so forward/back share one spatial model. Directional CSS lives in `globals.css` under `:active-view-transition-type(...)`. No duplicate rendering (unlike the swipe peek), so no width-mismatch class of bug. Unsupported browsers fall back to an instant nav.
+- **Swipe-back** is gesture-driven (direct manipulation) with a spring-ish snap; its `navigate()` deliberately does **not** opt into View Transitions (it already animates the slide itself). See the mobile-board notes.
+- **Journal cards** lift subtly on hover (desktop) and scale on press (`active:scale-[0.99]`).
 - **Reduced motion**: a global `@media (prefers-reduced-motion: reduce)` neutralizes transitions/animations app-wide (covers Radix/vaul). Always honor it when adding motion.
 - The mobile board shell is `fixed inset-0` so the board and the swipe-back peek share the exact same box (no width mismatch on hand-off).
 
