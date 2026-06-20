@@ -1,4 +1,6 @@
 import { store } from '@/lib/store';
+import { encryptData, decryptData } from '@/lib/crypto';
+import { ForwardCompatError } from '@/lib/schema';
 
 export function generateShortId() {
   return Math.random().toString(36).substring(2, 15);
@@ -80,85 +82,6 @@ export async function exportData(password: string) {
   }
 }
 
-// Encryption helpers using Web Crypto API
-async function deriveKey(
-  password: string,
-  salt: Uint8Array
-): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const passwordKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits', 'deriveKey']
-  );
-
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt as BufferSource,
-      iterations: 100000,
-      hash: 'SHA-256',
-    },
-    passwordKey,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
-}
-
-async function encryptData(data: string, password: string): Promise<string> {
-  const salt = new Uint8Array(16);
-  crypto.getRandomValues(salt);
-
-  const iv = new Uint8Array(12);
-  crypto.getRandomValues(iv);
-
-  const key = await deriveKey(password, salt);
-
-  const encoder = new TextEncoder();
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    encoder.encode(data)
-  );
-
-  // Combine salt + iv + encrypted data
-  const combined = new Uint8Array(
-    salt.length + iv.length + encrypted.byteLength
-  );
-  combined.set(salt, 0);
-  combined.set(iv, salt.length);
-  combined.set(new Uint8Array(encrypted), salt.length + iv.length);
-
-  // Convert to base64 for storage
-  return btoa(String.fromCharCode(...combined));
-}
-
-async function decryptData(
-  encryptedData: string,
-  password: string
-): Promise<string> {
-  // Decode from base64
-  const combined = Uint8Array.from(atob(encryptedData), (c) => c.charCodeAt(0));
-
-  const salt = new Uint8Array(combined.slice(0, 16));
-  const iv = new Uint8Array(combined.slice(16, 28));
-  const data = new Uint8Array(combined.slice(28));
-
-  const key = await deriveKey(password, salt);
-
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    data
-  );
-
-  const decoder = new TextDecoder();
-  return decoder.decode(decrypted);
-}
-
 // This one just returns the selected file
 export function selectImportFile(): Promise<File | null> {
   return new Promise((resolve) => {
@@ -180,21 +103,16 @@ export async function importData(file: File, password: string) {
   try {
     const encryptedText = await file.text();
     const decryptedData = await decryptData(encryptedText, password);
-    const data = JSON.parse(decryptedData);
 
-    // Validate structure
-    if (!data.boards || !data.entries) {
-      return {
-        success: false,
-        message: "This doesn't appear to be a valid backup file.",
-      };
-    }
-
-    // Save through the persistence seam
-    await store.importRaw(JSON.stringify(data));
+    // store.importRaw migrates the versioned envelope (or legacy bare data) and
+    // persists it; it throws ForwardCompatError if the backup is newer than us.
+    await store.importRaw(decryptedData);
 
     return { success: true, message: 'Your journal has been restored!' };
   } catch (error: any) {
+    if (error instanceof ForwardCompatError) {
+      return { success: false, message: error.message };
+    }
     if (error.name === 'OperationError') {
       return {
         success: false,

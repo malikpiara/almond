@@ -11,12 +11,19 @@ import './globals.css';
 import { RootLayout } from './routes/root';
 import { Home } from './routes/home';
 import { Board } from './routes/board';
+import { IndexRedirect } from './routes/index-redirect';
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
-const homeRoute = createRoute({
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  component: IndexRedirect,
+});
+
+const journalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/journals',
   component: Home,
 });
 
@@ -26,7 +33,11 @@ const boardRoute = createRoute({
   component: Board,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, boardRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  journalsRoute,
+  boardRoute,
+]);
 
 const router = createRouter({ routeTree });
 
