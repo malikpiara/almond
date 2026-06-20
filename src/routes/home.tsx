@@ -100,7 +100,13 @@ export function Home() {
             key={board.id}
             to='/boards/$id'
             params={{ id: board.id }}
-            viewTransition={{ types: ['slide-forward'] }}
+            viewTransition={{ types: [isMobile ? 'slide-forward' : 'card-morph'] }}
+            onClick={(e) => {
+              // Desktop: this card morphs into the board surface. Tag only the
+              // tapped card so the shared name is unique in the snapshot.
+              if (!isMobile)
+                e.currentTarget.style.viewTransitionName = 'journal-surface';
+            }}
           >
             <Card className='text-gray-800 w-full min-h-24 transition-[transform,box-shadow] duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]'>
               <CardContent>{board.prompt}</CardContent>

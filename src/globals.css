@@ -13,6 +13,7 @@ html {
 :root {
   --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
   --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @keyframes entry-appear {
@@ -60,14 +61,21 @@ html {
   animation-timing-function: var(--ease-out-cubic);
 }
 
+/* Forward (open a journal): snappy, almost-instant entrance with a smooth
+   settle — the incoming board leads, the list parallaxes out behind it. */
 html:active-view-transition-type(slide-forward)::view-transition-old(root) {
   animation-name: vt-out-left;
+  animation-duration: 180ms;
+  animation-timing-function: var(--ease-out-quint);
   z-index: 0;
 }
 html:active-view-transition-type(slide-forward)::view-transition-new(root) {
   animation-name: vt-in-right;
+  animation-duration: 180ms;
+  animation-timing-function: var(--ease-out-quint);
   z-index: 1;
 }
+/* Back (return to journals): the board slides off to reveal the list. */
 html:active-view-transition-type(slide-back)::view-transition-old(root) {
   animation-name: vt-out-right;
   z-index: 1;
@@ -75,6 +83,25 @@ html:active-view-transition-type(slide-back)::view-transition-old(root) {
 html:active-view-transition-type(slide-back)::view-transition-new(root) {
   animation-name: vt-in-left;
   z-index: 0;
+}
+
+/* Desktop: a full-width slide is too much across a wide screen, so instead the
+   tapped journal card morphs into the board surface (shared-element transition)
+   and the rest cross-fades. The card and the board column share the
+   `journal-surface` view-transition-name; the API interpolates position+size. */
+html:active-view-transition-type(card-morph)::view-transition-old(root),
+html:active-view-transition-type(card-morph)::view-transition-new(root) {
+  animation-duration: 240ms;
+}
+::view-transition-group(journal-surface) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out-cubic);
+}
+::view-transition-old(journal-surface),
+::view-transition-new(journal-surface) {
+  /* cross-fade the differing contents while the box morphs */
+  animation-duration: 220ms;
+  animation-timing-function: var(--ease-out-cubic);
 }
 
 /* Respect users who ask for less motion: neutralize transitions/animations

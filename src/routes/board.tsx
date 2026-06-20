@@ -365,10 +365,13 @@ export function Board() {
 
   // Desktop: original centered column, fixed-corner controls, inline form, cards.
   return (
-    <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'>
+    <div
+      style={{ viewTransitionName: 'journal-surface' }}
+      className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'
+    >
       <Link
         to='/journals'
-        viewTransition={{ types: ['slide-back'] }}
+        viewTransition={{ types: ['card-morph'] }}
         className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
       >
         ← Journals
