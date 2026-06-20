@@ -40,8 +40,11 @@ const formSchema = z.object({
     .max(3000, 'Your answer must be at most 3000 characters.'),
 });
 
-export function Board() {
-  const { id: boardId } = useParams({ from: '/boards/$id' });
+export function Board({ boardId: boardIdProp }: { boardId?: string } = {}) {
+  // `boardIdProp` lets Home render a Board as an overlay (pre-rendered, then
+  // slid in) for the mobile open transition; the route uses the URL param.
+  const params = useParams({ strict: false });
+  const boardId = boardIdProp ?? (params as { id?: string }).id ?? '';
   const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
