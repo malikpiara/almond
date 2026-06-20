@@ -1,8 +1,4 @@
-import {
-  uniqueNamesGenerator,
-  adjectives,
-  colors,
-} from 'unique-names-generator';
+import { store } from '@/lib/store';
 
 export function generateShortId() {
   return Math.random().toString(36).substring(2, 15);
@@ -20,8 +16,8 @@ export function generateBoardId() {
 }
 
 export async function exportData(password: string) {
-  // 1. Get data from localStorage
-  const data = localStorage.getItem('user-data');
+  // 1. Get data through the persistence seam
+  const data = await store.exportRaw();
 
   if (!data) {
     return {
@@ -79,7 +75,7 @@ export async function exportData(password: string) {
       success: true,
       message: 'Encrypted backup exported successfully!',
     };
-  } catch (error) {
+  } catch {
     return { success: false, message: 'Error encrypting data' };
   }
 }
@@ -194,11 +190,10 @@ export async function importData(file: File, password: string) {
       };
     }
 
-    // Save to localStorage
-    localStorage.setItem('user-data', JSON.stringify(data));
+    // Save through the persistence seam
+    await store.importRaw(JSON.stringify(data));
 
     return { success: true, message: 'Your journal has been restored!' };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (error.name === 'OperationError') {
       return {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, Check, Download } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,7 @@ export function ExportModal({ isOpen, onClose, onConfirm }: ExportModalProps) {
       setCopied(true);
       toast.success('Passphrase copied - keep it somewhere safe');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy passphrase');
     }
   };

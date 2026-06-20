@@ -1,12 +1,10 @@
-'use client';
-
+import { useEffect, useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { toast } from 'sonner';
+import { store } from '@/lib/store';
+import type { Board } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { generateBoardId } from '@/utils/utils';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { UserData, Board } from '@/types';
 import {
   Popover,
   PopoverContent,
@@ -15,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
-export default function Boards() {
+export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
 
   const [newPrompt, setNewPrompt] = useState(
@@ -25,44 +23,32 @@ export default function Boards() {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   useEffect(() => {
-    const savedData = localStorage.getItem('user-data');
-
-    if (savedData) {
-      const data: UserData = JSON.parse(savedData);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setBoards(data.boards);
-    } else {
-      // First time - create default board
-      const defaultBoard: Board = {
-        id: generateBoardId(),
-        prompt: 'What are you grateful for today?',
-        createdAt: Date.now(),
-        isDeleted: false,
-      };
-
-      const initialData: UserData = {
-        boards: [defaultBoard],
-        entries: [],
-      };
-
-      localStorage.setItem('user-data', JSON.stringify(initialData));
-    }
+    store
+      .init()
+      .then(() => store.getBoards())
+      .then(setBoards);
   }, []);
+
+  async function handleCreate() {
+    await store.createBoard(newPrompt);
+    setBoards(await store.getBoards());
+    setIsPopoverOpen(false);
+    toast('Board created!');
+  }
+
   return (
     <div className='max-w-4xl flex flex-col min-h-screen gap-8 px-8'>
       <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-10'>
         Your Journals
       </h1>
       <section id='boards' className='grid grid-cols-2 gap-4'>
-        {boards
-          ?.filter((board) => !board.isDeleted)
-          .map((board) => (
-            <Link key={board.id} href={`boards/${board.id}`}>
-              <Card className='rounded-md text-gray-800 w-92 h-24'>
-                <CardContent>{board.prompt}</CardContent>
-              </Card>
-            </Link>
-          ))}
+        {boards.map((board) => (
+          <Link key={board.id} to='/boards/$id' params={{ id: board.id }}>
+            <Card className='rounded-md text-gray-800 w-92 h-24'>
+              <CardContent>{board.prompt}</CardContent>
+            </Card>
+          </Link>
+        ))}
       </section>
 
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
@@ -99,31 +85,7 @@ export default function Boards() {
           </div>
           <Button
             className='cursor-pointer  bg-gray-700 hover:bg-gray-600 rounded-lg'
-            onClick={() => {
-              const newBoard: Board = {
-                id: generateBoardId(),
-                prompt: newPrompt,
-                createdAt: Date.now(),
-                isDeleted: false,
-              };
-
-              const savedData = localStorage.getItem('user-data');
-              const userData: UserData = savedData
-                ? JSON.parse(savedData)
-                : { boards: [], entries: [] };
-
-              const updatedData: UserData = {
-                boards: [...userData.boards, newBoard],
-                entries: [...userData.entries],
-              };
-
-              setBoards(updatedData.boards);
-              localStorage.setItem('user-data', JSON.stringify(updatedData));
-
-              setIsPopoverOpen(false);
-
-              toast('Board created!');
-            }}
+            onClick={handleCreate}
           >
             + Create New Journal
           </Button>
@@ -134,7 +96,7 @@ export default function Boards() {
                 key={index}
                 className='items-center grid grid-cols-3 my-2 group'
               >
-                <div className='text-sm col-span-2 text-muted-foreground group-hover:text-gray-900'>
+                <div className='text-sm col-span-2 text-muted-foreground group-hover:text-gray-900 transition-colors'>
                   {prompt}
                 </div>
                 <Button
