@@ -12,6 +12,7 @@ import { RootLayout } from './routes/root';
 import { Home } from './routes/home';
 import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
+import { LinkDevice } from './routes/link-device';
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -33,10 +34,17 @@ const boardRoute = createRoute({
   component: Board,
 });
 
+const linkRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/link',
+  component: LinkDevice,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   journalsRoute,
   boardRoute,
+  linkRoute,
 ]);
 
 const router = createRouter({ routeTree });

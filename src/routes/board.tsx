@@ -7,9 +7,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon } from 'lucide-react';
 
-import { ImportModal } from '@/components/import-modal';
-import { ExportModal } from '@/components/export-modal';
-import { SyncModal } from '@/components/sync-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Field, FieldError, FieldGroup } from '@/components/ui/field';
@@ -22,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { exportData, importData, selectImportFile } from '@/utils/utils';
 import { store } from '@/lib/store';
 import { extractEntities } from '@/lib/api';
 import type { Board as BoardType, Entry } from '@/types';
@@ -50,20 +46,6 @@ export function Board() {
   const [loading, setLoading] = useState(true);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  async function refresh() {
-    const [b, e] = await Promise.all([
-      store.getBoard(boardId),
-      store.getEntries(boardId),
-    ]);
-    setBoard(b);
-    setEntries(e);
-  }
 
   useEffect(() => {
     localStorage.setItem('almond-last-board', boardId); // land-in-writing
@@ -114,27 +96,6 @@ export function Board() {
       toast('Error saving entry');
     }
   }
-
-  const handleExportConfirm = async (password: string) => {
-    const result = await exportData(password);
-    toast(result.message);
-    setExportModalOpen(false);
-  };
-
-  const handleImportConfirm = async (password: string) => {
-    if (!selectedFile) return;
-
-    const result = await importData(selectedFile, password);
-
-    if (result.success) {
-      toast.success(result.message);
-      setImportModalOpen(false);
-      await refresh(); // re-read from the store instead of a full reload
-    } else {
-      toast.error(result.message);
-      // Modal stays open for retry
-    }
-  };
 
   if (loading) {
     return null;
@@ -280,44 +241,6 @@ export function Board() {
           </Card>
         ))}
       </section>
-      <section id='sync' className='fixed right-2 bottom-2'>
-        <Button
-          variant='ghost'
-          className='cursor-pointer'
-          onClick={() => setSyncModalOpen(true)}
-        >
-          Sync
-        </Button>
-      </section>
-
-      <SyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onAfterSync={refresh}
-        onExport={() => {
-          setSyncModalOpen(false);
-          setExportModalOpen(true);
-        }}
-        onImport={async () => {
-          setSyncModalOpen(false);
-          const file = await selectImportFile();
-          if (file) {
-            setSelectedFile(file);
-            setImportModalOpen(true);
-          }
-        }}
-      />
-      <ExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        onConfirm={handleExportConfirm}
-      />
-      <ImportModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        file={selectedFile}
-        onConfirm={handleImportConfirm}
-      />
     </div>
   );
 }

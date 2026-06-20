@@ -29,7 +29,14 @@ const LAST_SYNC_KEY = 'almond-drive-last-sync';
 
 export type SyncResult = {
   ok: boolean;
-  reason?: 'not-configured' | 'no-passphrase' | 'auth' | 'bad-passphrase' | 'forward-compat' | 'error';
+  reason?:
+    | 'not-configured'
+    | 'no-passphrase'
+    | 'auth'
+    | 'bad-passphrase'
+    | 'needs-pairing'
+    | 'forward-compat'
+    | 'error';
 };
 
 export function isConfigured(): boolean {
@@ -58,6 +65,31 @@ export function disconnect(): void {
 function markConnected(passphrase: string): void {
   localStorage.setItem(PASS_KEY, passphrase);
   localStorage.setItem(CONNECTED_KEY, '1');
+}
+
+/** A high-entropy random sync key (the secret, transferred device-to-device
+ *  via the pairing QR — never typed by the user). */
+function generateKey(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/** Apply a sync key received from another device (via the /link QR/deep-link). */
+export function applyPairingKey(key: string): void {
+  markConnected(key);
+}
+
+/** Deep link that carries the sync key in the URL fragment (never sent to any
+ *  server). Encoded as a QR on a connected device so a new device can pair by
+ *  scanning it with its native camera. Null when not connected. */
+export function getLinkUrl(): string | null {
+  const key = getPassphrase();
+  if (!key) return null;
+  return `${location.origin}/link#k=${encodeURIComponent(key)}`;
 }
 
 function markSynced(): void {
@@ -213,17 +245,35 @@ export async function sync(interactive = false): Promise<SyncResult> {
   }
 }
 
-/** First-time connect: interactive consent, store the passphrase, initial sync. */
-export async function connect(passphrase: string): Promise<SyncResult> {
+/**
+ * Connect this device. First device (no remote file): generate a fresh sync key
+ * and push. Already-keyed device: just sync. A device that finds an existing
+ * remote journal but has no key must PAIR instead (returns `needs-pairing`) —
+ * so we never create a divergent key or clobber the existing journal.
+ */
+export async function connect(): Promise<SyncResult> {
   if (!isConfigured()) return { ok: false, reason: 'not-configured' };
+
+  let token: string;
   try {
-    await getToken(true);
+    token = await getToken(true);
   } catch {
     return { ok: false, reason: 'auth' };
   }
-  markConnected(passphrase);
+
+  let id: string | null;
+  try {
+    id = await findFileId(token);
+  } catch {
+    return { ok: false, reason: 'error' };
+  }
+
+  const existingKey = getPassphrase();
+  if (id && !existingKey) return { ok: false, reason: 'needs-pairing' };
+
+  markConnected(existingKey ?? generateKey());
   const result = await sync(true);
-  if (!result.ok) disconnect(); // don't leave a half-connected state
+  if (!result.ok && !existingKey) disconnect(); // roll back a fresh, failed setup
   return result;
 }
 
