@@ -108,7 +108,7 @@ export function Home() {
                 e.currentTarget.style.viewTransitionName = 'journal-surface';
             }}
           >
-            <Card className='text-gray-800 w-full min-h-24 transition-[transform,box-shadow] duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]'>
+            <Card className='text-gray-800 w-full min-h-24 transition-[transform,box-shadow] duration-200 hover:shadow-md active:scale-[0.99]'>
               <CardContent>{board.prompt}</CardContent>
             </Card>
           </Link>
