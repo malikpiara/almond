@@ -22,7 +22,7 @@ The single screen that matters most is `/boards/$id` — the journal view. Land-
 
 A single thin amber rail down the left edge of every screen — the **notebook spine**.
 
-- Mobile: `w-0.5` (2px), `bg-amber-200`
+- Mobile: `w-2` (8px), `bg-amber-200` (2px was tried but is invisible on a real phone — keep it visibly present)
 - Desktop: `w-3` (12px), `bg-amber-200`
 - Continuous top-to-bottom: `fixed inset-y-0 left-0 z-20 pointer-events-none`
 
@@ -151,7 +151,10 @@ Where two implementations exist for the same surface (desktop vs. mobile), both 
 - Branch on `useIsMobile()` per entry.
 
 ### Sticky translucent header
-Pattern: `sticky top-0 z-10 -mx-{container-px} px-{container-px} py-3 bg-[#FAF9F5]/80 backdrop-blur-sm`. Used at the top of both `home.tsx` and `board.tsx`. The negative margins let the header span the full container width while the rest of the page keeps its inset.
+Pattern: `sticky top-0 z-10 -mx-{container-px} px-{container-px} py-3 bg-[#FAF9F5]/80 backdrop-blur-sm`. The negative margins let the header span the full container width while the rest of the page keeps its inset.
+
+- `home.tsx` uses it at both viewports (the "Your Journals" title bar).
+- `board.tsx` uses it **only on mobile** (← Journals + ⋯, via a `useIsMobile()` branch). On desktop the board keeps its original **fixed-corner** controls (`← Journals` at `fixed left-6 top-4`, `⋯` at `fixed right-6 top-3`) and a vertically-centered `max-w-3xl` column — that desktop layout is deliberate; don't replace it with the sticky bar.
 
 ### Global controls
 - **Sync** trigger lives in the global root layout, fixed `right-2 bottom-2`, as a `ghost` `text-gray-500` button. It's intentionally quiet — Sync is an occasional action.

@@ -133,48 +133,68 @@ export function Board() {
     );
   }
 
+  const journalMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='cursor-pointer text-gray-500 h-11 w-11 sm:h-9 sm:w-9'
+          aria-label='Journal options'
+        >
+          <MoreHorizontalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem
+          className='cursor-pointer'
+          onClick={async () => {
+            if (
+              confirm('Delete this journal? Its entries will be hidden too.')
+            ) {
+              await store.deleteBoard(boardId);
+              navigate({ to: '/journals' });
+            }
+          }}
+        >
+          Delete this journal
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div
-      className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-4 sm:px-8 pb-28'
+      className={
+        isMobile
+          ? 'flex flex-col min-h-screen gap-8 px-4 pb-28'
+          : 'max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'
+      }
       {...swipeBack}
     >
-      <Link
-        to='/journals'
-        className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
-      >
-        ← Journals
-      </Link>
-      <div className='fixed right-6 top-3'>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='cursor-pointer text-gray-500 h-11 w-11 sm:h-9 sm:w-9'
-              aria-label='Journal options'
-            >
-              <MoreHorizontalIcon />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuItem
-              className='cursor-pointer'
-              onClick={async () => {
-                if (
-                  confirm(
-                    'Delete this journal? Its entries will be hidden too.'
-                  )
-                ) {
-                  await store.deleteBoard(boardId);
-                  navigate({ to: '/journals' });
-                }
-              }}
-            >
-              Delete this journal
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {isMobile ? (
+        // Mobile: sticky translucent header bar.
+        <div className='sticky top-0 z-10 -mx-4 px-4 py-3 flex items-center justify-between bg-[#FAF9F5]/80 backdrop-blur-sm'>
+          <Link
+            to='/journals'
+            className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+          >
+            ← Journals
+          </Link>
+          {journalMenu}
+        </div>
+      ) : (
+        // Desktop: fixed corner controls (original layout).
+        <>
+          <Link
+            to='/journals'
+            className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+          >
+            ← Journals
+          </Link>
+          <div className='fixed right-6 top-3'>{journalMenu}</div>
+        </>
+      )}
 
       <form
         id='form-rhf-demo'
@@ -187,7 +207,7 @@ export function Board() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 sm:mt-20'>
                   {board.prompt}
                 </h1>
                 <InputGroup>
