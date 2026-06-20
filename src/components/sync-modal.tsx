@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -92,7 +86,7 @@ export function SyncModal({
   };
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
@@ -101,142 +95,132 @@ export function SyncModal({
         }
         onClose();
       }}
+      title='Sync across devices'
+      description='Your journal syncs to your own Google Drive, end-to-end encrypted — neither we nor Google can read it.'
     >
-      <DialogContent className='sm:max-w-md'>
-        <DialogHeader>
-          <DialogTitle>Sync across devices</DialogTitle>
-          <DialogDescription>
-            Your journal syncs to your own Google Drive, end-to-end encrypted —
-            neither we nor Google can read it.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!configured ? (
-          <p className='text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3'>
-            Drive sync isn’t configured in this build yet.
-          </p>
-        ) : connected ? (
-          showLink ? (
-            <div className='space-y-3 text-center'>
-              <p className='text-sm text-gray-600'>
-                On your other device, scan this with the camera (or open the
-                copied link). Show it only to your own device.
-              </p>
-              {qr ? (
-                <img
-                  src={qr}
-                  alt='Device pairing QR code'
-                  className='mx-auto rounded-lg'
-                  width={220}
-                  height={220}
-                />
-              ) : (
-                <p className='text-sm text-gray-400'>Generating…</p>
-              )}
-              <div className='flex gap-2 justify-center'>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='cursor-pointer'
-                  onClick={copyLink}
-                >
-                  Copy link
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='cursor-pointer'
-                  onClick={() => setShowLink(false)}
-                >
-                  Done
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className='space-y-4'>
-              <p className='text-sm text-gray-600'>
-                Connected
-                {last
-                  ? ` · synced ${formatDistanceToNow(last, { addSuffix: true })}`
-                  : ''}
-                .
-              </p>
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  onClick={() => run(() => sync(true), 'Synced')}
-                  disabled={busy}
-                  className='cursor-pointer bg-gray-700 hover:bg-gray-600'
-                >
-                  {busy ? 'Syncing…' : 'Sync now'}
-                </Button>
-                <Button
-                  variant='outline'
-                  className='cursor-pointer'
-                  onClick={() => setShowLink(true)}
-                >
-                  Link a device
-                </Button>
-                <Button
-                  variant='ghost'
-                  className='cursor-pointer'
-                  onClick={() => {
-                    disconnect();
-                    toast('Disconnected from Google Drive');
-                    onClose();
-                  }}
-                >
-                  Disconnect
-                </Button>
-              </div>
-            </div>
-          )
-        ) : (
-          <div className='space-y-3'>
-            <Button
-              onClick={() => run(() => connect(), 'Connected & synced')}
-              disabled={busy}
-              className='cursor-pointer bg-gray-700 hover:bg-gray-600 w-full'
-            >
-              {busy ? 'Connecting…' : 'Connect Google Drive'}
-            </Button>
-            <p
-              className={`text-sm rounded-lg p-3 ${
-                needsPairing
-                  ? 'text-amber-800 bg-amber-50 border border-amber-200'
-                  : 'text-gray-500'
-              }`}
-            >
-              Already using Almond on another device? Open it there →{' '}
-              <strong>Sync → Link a device</strong>, then scan that QR with this
-              device’s camera.
+      {!configured ? (
+        <p className='text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3'>
+          Drive sync isn’t configured in this build yet.
+        </p>
+      ) : connected ? (
+        showLink ? (
+          <div className='space-y-3 text-center'>
+            <p className='text-sm text-gray-600'>
+              On your other device, scan this with the camera (or open the
+              copied link). Show it only to your own device.
             </p>
+            {qr ? (
+              <img
+                src={qr}
+                alt='Device pairing QR code'
+                className='mx-auto rounded-lg'
+                width={220}
+                height={220}
+              />
+            ) : (
+              <p className='text-sm text-gray-400'>Generating…</p>
+            )}
+            <div className='flex gap-2 justify-center'>
+              <Button
+                variant='ghost'
+                className='cursor-pointer'
+                onClick={copyLink}
+              >
+                Copy link
+              </Button>
+              <Button
+                variant='ghost'
+                className='cursor-pointer'
+                onClick={() => setShowLink(false)}
+              >
+                Done
+              </Button>
+            </div>
           </div>
-        )}
-
-        <div className='border-t border-gray-200 pt-3 mt-1'>
-          <p className='text-xs text-gray-500 mb-2'>
-            Backup &amp; restore (advanced)
+        ) : (
+          <div className='space-y-4'>
+            <p className='text-sm text-gray-600'>
+              Connected
+              {last
+                ? ` · synced ${formatDistanceToNow(last, { addSuffix: true })}`
+                : ''}
+              .
+            </p>
+            <div className='flex flex-wrap gap-2'>
+              <Button
+                onClick={() => run(() => sync(true), 'Synced')}
+                disabled={busy}
+                className='cursor-pointer bg-gray-700 hover:bg-gray-600'
+              >
+                {busy ? 'Syncing…' : 'Sync now'}
+              </Button>
+              <Button
+                variant='outline'
+                className='cursor-pointer'
+                onClick={() => setShowLink(true)}
+              >
+                Link a device
+              </Button>
+              <Button
+                variant='ghost'
+                className='cursor-pointer'
+                onClick={() => {
+                  disconnect();
+                  toast('Disconnected from Google Drive');
+                  onClose();
+                }}
+              >
+                Disconnect
+              </Button>
+            </div>
+          </div>
+        )
+      ) : (
+        <div className='space-y-3'>
+          <Button
+            onClick={() => run(() => connect(), 'Connected & synced')}
+            disabled={busy}
+            className='cursor-pointer bg-gray-700 hover:bg-gray-600 w-full'
+          >
+            {busy ? 'Connecting…' : 'Connect Google Drive'}
+          </Button>
+          <p
+            className={`text-sm rounded-lg p-3 ${
+              needsPairing
+                ? 'text-amber-800 bg-amber-50 border border-amber-200'
+                : 'text-gray-500'
+            }`}
+          >
+            Already using Almond on another device? Open it there →{' '}
+            <strong>Sync → Link a device</strong>, then scan that QR with this
+            device’s camera.
           </p>
-          <div className='flex gap-2'>
-            <Button
-              variant='ghost'
-              size='sm'
-              className='cursor-pointer'
-              onClick={onExport}
-            >
-              Download backup
-            </Button>
-            <Button
-              variant='ghost'
-              size='sm'
-              className='cursor-pointer'
-              onClick={onImport}
-            >
-              Restore from file
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      <div className='border-t border-gray-200 pt-3 mt-4'>
+        <p className='text-xs text-gray-500 mb-2'>
+          Backup &amp; restore (advanced)
+        </p>
+        <div className='flex gap-2'>
+          <Button
+            variant='ghost'
+            size='sm'
+            className='cursor-pointer'
+            onClick={onExport}
+          >
+            Download backup
+          </Button>
+          <Button
+            variant='ghost'
+            size='sm'
+            className='cursor-pointer'
+            onClick={onImport}
+          >
+            Restore from file
+          </Button>
+        </div>
+      </div>
+    </ResponsiveDialog>
   );
 }

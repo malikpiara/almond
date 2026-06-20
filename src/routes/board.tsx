@@ -8,7 +8,6 @@ import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import { InputGroup, InputGroupTextarea } from '@/components/ui/input-group';
 import {
@@ -103,8 +102,8 @@ export function Board() {
 
   if (!board) {
     return (
-      <div className='max-w-4xl flex flex-col min-h-screen gap-8 px-8'>
-        <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+      <div className='max-w-2xl mx-auto flex flex-col min-h-screen justify-center gap-6 px-6 sm:px-8'>
+        <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
           Journal not found
         </h1>
         <p className='text-gray-500'>
@@ -118,18 +117,19 @@ export function Board() {
   }
 
   return (
-    <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12'>
-      <Link
-        to='/journals'
-        className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
-      >
-        ← Journals
-      </Link>
-      <div className='fixed right-6 top-3'>
+    <div className='max-w-2xl mx-auto flex flex-col min-h-screen gap-8 px-4 sm:px-8 pb-28'>
+      <div className='sticky top-0 z-10 -mx-4 sm:-mx-8 px-4 sm:px-8 py-3 flex items-center justify-between bg-[#FAF9F5]/80 backdrop-blur-sm'>
+        <Link
+          to='/journals'
+          className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer py-2 pr-2'
+        >
+          ← Journals
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant='ghost'
+              size='icon'
               className='cursor-pointer text-gray-500'
               aria-label='Journal options'
             >
@@ -155,6 +155,7 @@ export function Board() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
       <form
         id='form-rhf-demo'
         className='space-y-4 w-full'
@@ -166,14 +167,14 @@ export function Board() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+                <h1 className='scroll-m-20 text-xl sm:text-2xl font-medium tracking-tight text-balance text-gray-800'>
                   {board.prompt}
                 </h1>
                 <InputGroup>
                   <InputGroupTextarea
                     {...field}
                     id='form-rhf-demo-description'
-                    placeholder={`Take a moment to reflect — what's something you feel grateful for today?`}
+                    placeholder='Take a moment to reflect…'
                     className='min-h-32 resize-none rounded-lg bg-white !text-lg'
                     aria-invalid={fieldState.invalid}
                   />
@@ -186,59 +187,64 @@ export function Board() {
             )}
           />
         </FieldGroup>
-        <Field orientation='horizontal'>
-          <Button type='submit' variant='outline' form='form-rhf-demo'>
+        <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+          <Button
+            type='submit'
+            form='form-rhf-demo'
+            className='w-full sm:w-auto cursor-pointer bg-gray-700 hover:bg-gray-600'
+          >
             Submit
           </Button>
           {isAnalyzing && (
-            <span className='text-sm text-gray-500 self-center'>
+            <span className='text-sm text-gray-500'>
               Tagging people &amp; places…
             </span>
           )}
-        </Field>
+        </div>
       </form>
-      <section id='entries' className='flex flex-col space-y-4 w-full'>
+
+      <section id='entries' className='divide-y divide-gray-200'>
         {entries.map((entry) => (
-          <Card key={entry.id} className='rounded-md text-gray-800'>
-            <CardContent className='whitespace-pre-line'>
+          <article key={entry.id} className='py-5 text-gray-800'>
+            <p className='whitespace-pre-line leading-relaxed'>
               {entry.content}
-            </CardContent>
-
-            <CardFooter className='text-sm opacity-60 justify-between'>
-              {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
-              <div>
-                <DropdownMenu modal={true}>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant='ghost' className='cursor-pointer'>
-                      <MoreHorizontalIcon />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className='w-56'>
-                    <DropdownMenuLabel>People</DropdownMenuLabel>
-
-                    {entry.entities?.people?.map((person, index) => (
-                      <DropdownMenuItem key={index}>{person}</DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Places</DropdownMenuLabel>
-
-                    {entry.entities?.places?.map((places, index) => (
-                      <DropdownMenuItem key={index}>{places}</DropdownMenuItem>
-                    ))}
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      className='cursor-pointer'
-                      onClick={() => deleteEntry(entry.id)}
-                    >
-                      Delete this entry
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardFooter>
-          </Card>
+            </p>
+            <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
+              <span>
+                {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+              </span>
+              <DropdownMenu modal={true}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='cursor-pointer h-8 w-8'
+                    aria-label='Entry options'
+                  >
+                    <MoreHorizontalIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className='w-56'>
+                  <DropdownMenuLabel>People</DropdownMenuLabel>
+                  {entry.entities?.people?.map((person, index) => (
+                    <DropdownMenuItem key={index}>{person}</DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Places</DropdownMenuLabel>
+                  {entry.entities?.places?.map((place, index) => (
+                    <DropdownMenuItem key={index}>{place}</DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className='cursor-pointer'
+                    onClick={() => deleteEntry(entry.id)}
+                  >
+                    Delete this entry
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </article>
         ))}
       </section>
     </div>

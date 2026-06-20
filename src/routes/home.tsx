@@ -5,22 +5,16 @@ import { store } from '@/lib/store';
 import type { Board } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { ResponsiveDialog } from '@/components/responsive-dialog';
 
 export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
-
   const [newPrompt, setNewPrompt] = useState(
     'What are you grateful for today?'
   );
-
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     store
@@ -32,8 +26,8 @@ export function Home() {
   async function handleCreate() {
     await store.createBoard(newPrompt);
     setBoards(await store.getBoards());
-    setIsPopoverOpen(false);
-    toast('Board created!');
+    setCreateOpen(false);
+    toast('Journal created!');
   }
 
   return (
@@ -51,69 +45,55 @@ export function Home() {
         ))}
       </section>
 
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-        <PopoverTrigger asChild>
+      <Button
+        variant='outline'
+        size='icon-lg'
+        className='fixed bottom-6 left-6 rounded-full cursor-pointer shadow-sm'
+        aria-label='Create a new journal'
+        onClick={() => setCreateOpen(true)}
+      >
+        +
+      </Button>
+
+      <ResponsiveDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title='Create a new journal'
+        description='Pick a prompt to answer daily, or start from a template.'
+      >
+        <div className='space-y-4'>
+          <Input
+            value={newPrompt}
+            onChange={(e) => setNewPrompt(e.target.value)}
+            className='h-11'
+            placeholder='What are you grateful for today?'
+          />
           <Button
-            variant='outline'
-            size={'icon-lg'}
-            className='fixed bottom-6 left-6 rounded-full cursor-pointer'
-          >
-            +
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className='w-md space-y-4'
-          sideOffset={5}
-          alignOffset={5}
-          side='top'
-          align='start'
-        >
-          <div className='space-y-2'>
-            <h4 className='leading-none font-medium'>Create a new journal</h4>
-            <p className='text-muted-foreground text-sm'>
-              Pick a prompt to answer daily or use one of our templates.
-            </p>
-          </div>
-          <div>
-            <div>
-              <Input
-                value={newPrompt}
-                onChange={(e) => setNewPrompt(e.target.value)}
-                className='col-span-2 h-8'
-              />
-            </div>
-          </div>
-          <Button
-            className='cursor-pointer  bg-gray-700 hover:bg-gray-600 rounded-lg'
+            className='w-full cursor-pointer bg-gray-700 hover:bg-gray-600'
             onClick={handleCreate}
           >
-            + Create New Journal
+            Create journal
           </Button>
-          <Separator className='my-4' />
-          {templatePrompts.map((prompt, index) => {
-            return (
-              <div
-                key={index}
-                className='items-center grid grid-cols-3 my-2 group'
+
+          <Separator />
+
+          <div className='space-y-1'>
+            {templatePrompts.map((prompt) => (
+              <button
+                key={prompt}
+                type='button'
+                onClick={() => setNewPrompt(prompt)}
+                className='w-full flex items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-sm text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer'
               >
-                <div className='text-sm col-span-2 text-muted-foreground group-hover:text-gray-900 transition-colors'>
-                  {prompt}
-                </div>
-                <Button
-                  variant={'secondary'}
-                  size={'sm'}
-                  onClick={() => {
-                    setNewPrompt(prompt);
-                  }}
-                  className='rounded-full bg-[#FFFBEA] text-[#83591e] px-5 hover:bg-amber-100 transition-colors max-w-28 justify-self-end cursor-pointer'
-                >
-                  Add
-                </Button>
-              </div>
-            );
-          })}
-        </PopoverContent>
-      </Popover>
+                <span className='flex-1'>{prompt}</span>
+                <span className='shrink-0 rounded-full bg-[#FFFBEA] text-[#83591e] px-3 py-1 text-xs'>
+                  Use
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }
