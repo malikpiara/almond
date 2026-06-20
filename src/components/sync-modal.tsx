@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { ResponsiveDialog } from '@/components/responsive-dialog';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -146,7 +147,7 @@ export function SyncModal({
                 : ''}
               .
             </p>
-            <div className='flex flex-wrap gap-2'>
+            <div className='flex flex-wrap gap-3'>
               <Button
                 onClick={() => run(() => sync(true), 'Synced')}
                 disabled={busy}
@@ -178,7 +179,7 @@ export function SyncModal({
       ) : (
         <div className='space-y-3'>
           <Button
-            onClick={() => run(() => connect(), 'Connected & synced')}
+            onClick={() => run(() => connect(), 'Connected and synced')}
             disabled={busy}
             className='cursor-pointer bg-gray-700 hover:bg-gray-600 w-full'
           >
@@ -198,14 +199,14 @@ export function SyncModal({
         </div>
       )}
 
-      <div className='border-t border-gray-200 pt-3 mt-4'>
+      <Separator className='mt-4' />
+      <div className='mt-4'>
         <p className='text-xs text-gray-500 mb-2'>
-          Backup &amp; restore (advanced)
+          Backup and restore (advanced)
         </p>
         <div className='flex gap-2'>
           <Button
             variant='ghost'
-            size='sm'
             className='cursor-pointer'
             onClick={onExport}
           >
@@ -213,7 +214,6 @@ export function SyncModal({
           </Button>
           <Button
             variant='ghost'
-            size='sm'
             className='cursor-pointer'
             onClick={onImport}
           >

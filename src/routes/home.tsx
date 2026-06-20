@@ -5,9 +5,22 @@ import { store } from '@/lib/store';
 import type { Board } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { ResponsiveDialog } from '@/components/responsive-dialog';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -15,6 +28,7 @@ export function Home() {
     'What are you grateful for today?'
   );
   const [createOpen, setCreateOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     store
@@ -30,70 +44,99 @@ export function Home() {
     toast('Journal created!');
   }
 
+  const triggerButton = (
+    <Button
+      variant='outline'
+      size='icon-lg'
+      className='fixed bottom-6 left-6 rounded-full cursor-pointer'
+      aria-label='Create a new journal'
+    >
+      +
+    </Button>
+  );
+
+  const body = (
+    <>
+      <Input
+        value={newPrompt}
+        onChange={(e) => setNewPrompt(e.target.value)}
+      />
+      <Button
+        className='cursor-pointer bg-gray-700 hover:bg-gray-600 rounded-lg'
+        onClick={handleCreate}
+      >
+        + Create New Journal
+      </Button>
+      <Separator className='my-4' />
+      {templatePrompts.map((prompt, index) => (
+        <div
+          key={index}
+          className='items-center grid grid-cols-3 my-2 group'
+        >
+          <div className='text-sm col-span-2 text-muted-foreground group-hover:text-gray-900 transition-colors'>
+            {prompt}
+          </div>
+          <Button
+            variant='secondary'
+            size='sm'
+            onClick={() => setNewPrompt(prompt)}
+            className='rounded-full bg-[#FFFBEA] text-[#83591e] px-5 hover:bg-amber-100 transition-colors max-w-28 justify-self-end cursor-pointer'
+          >
+            Add
+          </Button>
+        </div>
+      ))}
+    </>
+  );
+
   return (
     <div className='max-w-4xl mx-auto flex flex-col min-h-screen gap-6 px-6 sm:px-8 pb-28'>
-      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-4 bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
+      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-3 bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
         Your Journals
       </h1>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (
           <Link key={board.id} to='/boards/$id' params={{ id: board.id }}>
-            <Card className='rounded-md text-gray-800 w-full h-24'>
+            <Card className='text-gray-800 w-full min-h-24'>
               <CardContent>{board.prompt}</CardContent>
             </Card>
           </Link>
         ))}
       </section>
 
-      <Button
-        variant='outline'
-        size='icon-lg'
-        className='fixed bottom-6 left-6 rounded-full cursor-pointer shadow-sm'
-        aria-label='Create a new journal'
-        onClick={() => setCreateOpen(true)}
-      >
-        +
-      </Button>
-
-      <ResponsiveDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title='Create a new journal'
-        description='Pick a prompt to answer daily, or start from a template.'
-      >
-        <div className='space-y-4'>
-          <Input
-            value={newPrompt}
-            onChange={(e) => setNewPrompt(e.target.value)}
-            className='h-11'
-            placeholder='What are you grateful for today?'
-          />
-          <Button
-            className='w-full cursor-pointer bg-gray-700 hover:bg-gray-600'
-            onClick={handleCreate}
+      {isMobile ? (
+        <Drawer open={createOpen} onOpenChange={setCreateOpen}>
+          <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader className='text-left'>
+              <DrawerTitle>Create a new journal</DrawerTitle>
+              <DrawerDescription>
+                Pick a prompt to answer daily or use one of our templates.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className='px-4 pb-8 space-y-4'>{body}</div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Popover open={createOpen} onOpenChange={setCreateOpen}>
+          <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+          <PopoverContent
+            className='w-md space-y-4'
+            sideOffset={5}
+            alignOffset={5}
+            side='top'
+            align='start'
           >
-            Create journal
-          </Button>
-
-          <Separator />
-
-          <div className='space-y-1'>
-            {templatePrompts.map((prompt) => (
-              <button
-                key={prompt}
-                type='button'
-                onClick={() => setNewPrompt(prompt)}
-                className='w-full flex items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-sm text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer'
-              >
-                <span className='flex-1'>{prompt}</span>
-                <span className='shrink-0 rounded-full bg-[#FFFBEA] text-[#83591e] px-3 py-1 text-xs'>
-                  Use
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </ResponsiveDialog>
+            <div className='space-y-2'>
+              <h4 className='leading-none font-medium'>Create a new journal</h4>
+              <p className='text-muted-foreground text-sm'>
+                Pick a prompt to answer daily or use one of our templates.
+              </p>
+            </div>
+            {body}
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }

@@ -48,7 +48,7 @@ export function LinkDevice() {
 
   return (
     <div className='max-w-md m-auto flex flex-col min-h-screen items-center justify-center gap-4 px-8 text-center'>
-      <h1 className='text-2xl font-medium text-gray-800'>
+      <h1 className='text-2xl font-medium tracking-tight text-balance text-gray-800'>
         {error ? 'Linking failed' : 'Linking this device…'}
       </h1>
       {error ? (

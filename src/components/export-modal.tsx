@@ -34,10 +34,10 @@ export function ExportModal({ isOpen, onClose, onConfirm }: ExportModalProps) {
         if (!open) onClose();
       }}
       title='Create a private backup'
-      description="Your entries never leave your device — we can't read them and neither can anyone else. Create an encrypted backup to move your journal or keep it safe."
+      description="Your entries never leave your device — we can’t read them and neither can anyone else. Create an encrypted backup to move your journal or keep it safe."
     >
       <div className='space-y-4'>
-        <Card className='p-4 bg-gray-50'>
+        <Card className='p-3 bg-gray-50'>
           <div className='space-y-2'>
             <p className='text-sm text-gray-600 font-medium'>Your passphrase:</p>
             <div className='flex items-center justify-between gap-2'>
@@ -63,7 +63,7 @@ export function ExportModal({ isOpen, onClose, onConfirm }: ExportModalProps) {
 
         <div className='rounded-lg bg-amber-50 border border-amber-200 p-3'>
           <p className='text-sm text-amber-800'>
-            🍃 No one can recover this passphrase — not even us. That's what
+            🍃 No one can recover this passphrase — not even us. That’s what
             keeps your thoughts truly private.
           </p>
         </div>

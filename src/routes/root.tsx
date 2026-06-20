@@ -35,7 +35,8 @@ export function RootLayout() {
 
   return (
     <>
-      <div className='w-3 h-screen bg-amber-200 fixed' />
+      {/* Thin "notebook spine" accent — keeps personality without crowding text */}
+      <div className='fixed inset-y-0 left-0 z-20 w-0.5 sm:w-3 bg-amber-200 pointer-events-none' />
       <Outlet />
 
       <Button
