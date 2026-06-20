@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSwipeBack } from '@/hooks/use-swipe-back';
+import { useOpenSync } from '@/lib/sync-ui';
 import { store } from '@/lib/store';
 import { extractEntities } from '@/lib/api';
 import type { Board as BoardType, Entry } from '@/types';
@@ -58,6 +59,7 @@ export function Board() {
   const [optionsEntry, setOptionsEntry] = useState<Entry | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const isMobile = useIsMobile();
+  const openSync = useOpenSync();
   const swipeBack = useSwipeBack(
     () => navigate({ to: '/journals' }),
     isMobile
@@ -82,14 +84,6 @@ export function Board() {
     };
   }, [boardId]);
 
-  // Mobile messaging layout: land at the bottom (newest entry) once loaded.
-  useEffect(() => {
-    if (!isMobile || loading) return;
-    requestAnimationFrame(() =>
-      window.scrollTo({ top: document.documentElement.scrollHeight })
-    );
-  }, [isMobile, loading]);
-
   async function deleteEntry(id: string) {
     await store.deleteEntry(id);
     setEntries(await store.getEntries(boardId));
@@ -103,11 +97,6 @@ export function Board() {
       setEntries(await store.getEntries(boardId));
       toast('Entry saved!');
       form.reset();
-      if (isMobile) {
-        requestAnimationFrame(() =>
-          window.scrollTo({ top: document.documentElement.scrollHeight })
-        );
-      }
 
       // Enrich with people/places in the background; patch the entry when it
       // lands. extractEntities never throws (empty on failure).
@@ -159,6 +148,17 @@ export function Board() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end'>
+        {isMobile && openSync ? (
+          <>
+            <DropdownMenuItem
+              className='cursor-pointer'
+              onClick={() => openSync()}
+            >
+              Sync
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <DropdownMenuItem
           className='cursor-pointer'
           onClick={async () => {
@@ -176,18 +176,12 @@ export function Board() {
     </DropdownMenu>
   );
 
-  return (
-    <div
-      className={
-        isMobile
-          ? 'flex flex-col min-h-screen gap-8 px-4 pb-28'
-          : 'max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'
-      }
-      {...swipeBack}
-    >
-      {isMobile ? (
-        // Mobile: sticky translucent header bar.
-        <div className='sticky top-0 z-10 -mx-4 px-3 py-2 flex items-center gap-1 bg-[#FAF9F5]'>
+  if (isMobile) {
+    // Mobile: a chat-style app shell — fixed header, a column-reverse message
+    // area (rests at the bottom by itself, no scroll scripting), composer footer.
+    return (
+      <div className='flex h-dvh flex-col' {...swipeBack}>
+        <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 py-2'>
           <Link
             to='/journals'
             aria-label='Back to journals'
@@ -200,72 +194,20 @@ export function Board() {
           </h1>
           {journalMenu}
         </div>
-      ) : (
-        // Desktop: fixed corner controls (original layout).
-        <>
-          <Link
-            to='/journals'
-            className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
-          >
-            ← Journals
-          </Link>
-          <div className='fixed right-6 top-3'>{journalMenu}</div>
-        </>
-      )}
 
-      {/* Mobile: prompt lives in the header; entries + composer only. */}
-      {!isMobile && (
-        // Desktop: original inline form (prompt + textarea + Submit).
-        <form
-          id='form-rhf-demo'
-          className='space-y-4 w-full'
-          onSubmit={form.handleSubmit(onSubmit)}
+        {/* column-reverse: newest entry (rendered first) lands at the bottom and
+            the scroll naturally rests there — the chat-app trick, no JS scroll. */}
+        <div
+          id='entries'
+          className='flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4'
         >
-          <FieldGroup>
-            <Controller
-              name='description'
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 sm:mt-20'>
-                    {board.prompt}
-                  </h1>
-                  <InputGroup>
-                    <InputGroupTextarea
-                      {...field}
-                      id='form-rhf-demo-description'
-                      placeholder='Take a moment to reflect…'
-                      className='min-h-32 resize-none rounded-lg bg-white !text-lg'
-                      aria-invalid={fieldState.invalid}
-                    />
-                  </InputGroup>
-
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-          </FieldGroup>
-          <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-            <Button type='submit' variant='outline' form='form-rhf-demo'>
-              Submit
-            </Button>
-            {isAnalyzing && (
-              <span className='text-sm text-gray-500'>
-                Tagging people and places…
-              </span>
-            )}
-          </div>
-        </form>
-      )}
-
-      {/* Desktop: cards (your original treatment). Mobile: full-bleed divider rows. */}
-      {isMobile ? (
-        <section id='entries' className='-mx-4 divide-y divide-gray-200'>
-          {/* Reversed so newest sits at the bottom, by the composer (chat-style). */}
-          {[...entries].reverse().map((entry) => (
-            <article key={entry.id} className='px-4 py-5 text-gray-800'>
+          {entries.map((entry, index) => (
+            <article
+              key={entry.id}
+              className={`py-5 text-gray-800${
+                index < entries.length - 1 ? ' border-t border-gray-200' : ''
+              }`}
+            >
               <p className='whitespace-pre-line leading-relaxed'>
                 {entry.content}
               </p>
@@ -288,78 +230,11 @@ export function Board() {
               </div>
             </article>
           ))}
-        </section>
-      ) : (
-        <section id='entries' className='flex flex-col gap-4'>
-          {entries.map((entry) => (
-            <Card key={entry.id} className='text-gray-800'>
-              <CardContent>
-                <p className='whitespace-pre-line leading-relaxed'>
-                  {entry.content}
-                </p>
-                <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
-                  <span>
-                    {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
-                  </span>
-                  <DropdownMenu modal={true}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='cursor-pointer h-8 w-8'
-                        aria-label='Entry options'
-                      >
-                        <MoreHorizontalIcon />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className='w-56'>
-                      {entry.entities?.people?.length ? (
-                        <>
-                          <DropdownMenuLabel>People</DropdownMenuLabel>
-                          {entry.entities.people.map((person, index) => (
-                            <DropdownMenuItem key={index}>
-                              {person}
-                            </DropdownMenuItem>
-                          ))}
-                        </>
-                      ) : null}
-                      {entry.entities?.places?.length ? (
-                        <>
-                          {entry.entities?.people?.length ? (
-                            <DropdownMenuSeparator />
-                          ) : null}
-                          <DropdownMenuLabel>Places</DropdownMenuLabel>
-                          {entry.entities.places.map((place, index) => (
-                            <DropdownMenuItem key={index}>
-                              {place}
-                            </DropdownMenuItem>
-                          ))}
-                        </>
-                      ) : null}
-                      {entry.entities?.people?.length ||
-                      entry.entities?.places?.length ? (
-                        <DropdownMenuSeparator />
-                      ) : null}
-                      <DropdownMenuItem
-                        className='cursor-pointer'
-                        onClick={() => deleteEntry(entry.id)}
-                      >
-                        Delete this entry
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-      )}
+        </div>
 
-      {/* Mobile: messaging-style composer pinned to the bottom. */}
-      {isMobile && (
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className='fixed inset-x-0 bottom-0 z-30 px-3 pt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-[#FAF9F5] from-35% to-transparent'
+          className='shrink-0 bg-[#FAF9F5] px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
         >
           <Controller
             name='description'
@@ -398,66 +273,185 @@ export function Board() {
             )}
           />
         </form>
-      )}
 
-      {/* Mobile-only sheet that mirrors the desktop dropdown 1:1 — same
-          label, item, and separator classes; no invented styling. */}
-      <Drawer open={optionsOpen} onOpenChange={setOptionsOpen}>
-        <DrawerContent>
-          <DrawerHeader className='sr-only'>
-            <DrawerTitle>Entry options</DrawerTitle>
-          </DrawerHeader>
-          {optionsEntry && (
-            <div className='px-4 pb-8 pt-2'>
-              {optionsEntry.entities?.people?.length ? (
-                <>
-                  <div className='px-2 py-1.5 text-sm font-medium'>People</div>
-                  {optionsEntry.entities.people.map((person, index) => (
-                    <div
-                      key={index}
-                      className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm'
-                    >
-                      {person}
-                    </div>
-                  ))}
-                </>
-              ) : null}
-              {optionsEntry.entities?.places?.length ? (
-                <>
-                  {optionsEntry.entities?.people?.length ? (
-                    <div className='bg-border -mx-1 my-1 h-px' />
-                  ) : null}
-                  <div className='px-2 py-1.5 text-sm font-medium'>Places</div>
-                  {optionsEntry.entities.places.map((place, index) => (
-                    <div
-                      key={index}
-                      className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm'
-                    >
-                      {place}
-                    </div>
-                  ))}
-                </>
-              ) : null}
-              {optionsEntry.entities?.people?.length ||
-              optionsEntry.entities?.places?.length ? (
-                <div className='bg-border -mx-1 my-1 h-px' />
-              ) : null}
-              <button
-                type='button'
-                className='relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm focus:bg-accent focus:text-accent-foreground hover:bg-accent'
-                onClick={() => {
-                  if (!optionsEntry) return;
-                  const id = optionsEntry.id;
-                  setOptionsOpen(false);
-                  deleteEntry(id);
-                }}
-              >
-                Delete this entry
-              </button>
-            </div>
+        {/* Entry options sheet (mirrors the desktop dropdown 1:1). */}
+        <Drawer open={optionsOpen} onOpenChange={setOptionsOpen}>
+          <DrawerContent>
+            <DrawerHeader className='sr-only'>
+              <DrawerTitle>Entry options</DrawerTitle>
+            </DrawerHeader>
+            {optionsEntry && (
+              <div className='px-4 pb-8 pt-2'>
+                {optionsEntry.entities?.people?.length ? (
+                  <>
+                    <div className='px-2 py-1.5 text-sm font-medium'>People</div>
+                    {optionsEntry.entities.people.map((person, index) => (
+                      <div
+                        key={index}
+                        className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm'
+                      >
+                        {person}
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+                {optionsEntry.entities?.places?.length ? (
+                  <>
+                    {optionsEntry.entities?.people?.length ? (
+                      <div className='bg-border -mx-1 my-1 h-px' />
+                    ) : null}
+                    <div className='px-2 py-1.5 text-sm font-medium'>Places</div>
+                    {optionsEntry.entities.places.map((place, index) => (
+                      <div
+                        key={index}
+                        className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm'
+                      >
+                        {place}
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+                {optionsEntry.entities?.people?.length ||
+                optionsEntry.entities?.places?.length ? (
+                  <div className='bg-border -mx-1 my-1 h-px' />
+                ) : null}
+                <button
+                  type='button'
+                  className='relative flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm focus:bg-accent focus:text-accent-foreground hover:bg-accent'
+                  onClick={() => {
+                    if (!optionsEntry) return;
+                    const id = optionsEntry.id;
+                    setOptionsOpen(false);
+                    deleteEntry(id);
+                  }}
+                >
+                  Delete this entry
+                </button>
+              </div>
+            )}
+          </DrawerContent>
+        </Drawer>
+      </div>
+    );
+  }
+
+  // Desktop: original centered column, fixed-corner controls, inline form, cards.
+  return (
+    <div className='max-w-3xl m-auto items-center justify-center flex flex-col min-h-screen gap-12 px-8 pb-28'>
+      <Link
+        to='/journals'
+        className='fixed left-6 top-4 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+      >
+        ← Journals
+      </Link>
+      <div className='fixed right-6 top-3'>{journalMenu}</div>
+
+      <form
+        id='form-rhf-demo'
+        className='space-y-4 w-full'
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        <FieldGroup>
+          <Controller
+            name='description'
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 mt-20'>
+                  {board.prompt}
+                </h1>
+                <InputGroup>
+                  <InputGroupTextarea
+                    {...field}
+                    id='form-rhf-demo-description'
+                    placeholder='Take a moment to reflect…'
+                    className='min-h-32 resize-none rounded-lg bg-white !text-lg'
+                    aria-invalid={fieldState.invalid}
+                  />
+                </InputGroup>
+
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </Field>
+            )}
+          />
+        </FieldGroup>
+        <Field orientation='horizontal'>
+          <Button type='submit' variant='outline' form='form-rhf-demo'>
+            Submit
+          </Button>
+          {isAnalyzing && (
+            <span className='text-sm text-gray-500 self-center'>
+              Tagging people and places…
+            </span>
           )}
-        </DrawerContent>
-      </Drawer>
+        </Field>
+      </form>
+
+      <section id='entries' className='flex flex-col gap-4 w-full'>
+        {entries.map((entry) => (
+          <Card key={entry.id} className='text-gray-800'>
+            <CardContent>
+              <p className='whitespace-pre-line leading-relaxed'>
+                {entry.content}
+              </p>
+              <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
+                <span>
+                  {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+                </span>
+                <DropdownMenu modal={true}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      className='cursor-pointer h-8 w-8'
+                      aria-label='Entry options'
+                    >
+                      <MoreHorizontalIcon />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className='w-56'>
+                    {entry.entities?.people?.length ? (
+                      <>
+                        <DropdownMenuLabel>People</DropdownMenuLabel>
+                        {entry.entities.people.map((person, index) => (
+                          <DropdownMenuItem key={index}>
+                            {person}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    ) : null}
+                    {entry.entities?.places?.length ? (
+                      <>
+                        {entry.entities?.people?.length ? (
+                          <DropdownMenuSeparator />
+                        ) : null}
+                        <DropdownMenuLabel>Places</DropdownMenuLabel>
+                        {entry.entities.places.map((place, index) => (
+                          <DropdownMenuItem key={index}>
+                            {place}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    ) : null}
+                    {entry.entities?.people?.length ||
+                    entry.entities?.places?.length ? (
+                      <DropdownMenuSeparator />
+                    ) : null}
+                    <DropdownMenuItem
+                      className='cursor-pointer'
+                      onClick={() => deleteEntry(entry.id)}
+                    >
+                      Delete this entry
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
     </div>
   );
 }

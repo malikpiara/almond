@@ -156,17 +156,26 @@ Pattern: `sticky top-0 z-10 -mx-{container-px} px-{container-px} py-3 bg-[#FAF9F
 - `home.tsx` uses it at both viewports (the "Your Journals" title bar), translucent.
 - `board.tsx` has its own header **only on mobile** (`useIsMobile()` branch): a **solid** `bg-[#FAF9F5]` bar (`py-2`) holding `←` back (`ArrowLeft`) + the **journal prompt as a truncated title** + `⋯`. Solid, not translucent, on purpose — the blur produced a visible seam. On desktop the board keeps its original **fixed-corner** controls (`← Journals` at `fixed left-6 top-4`, `⋯` at `fixed right-6 top-3`) and a vertically-centered `max-w-3xl` column — deliberate; don't replace it with the bar, and don't move the prompt into a desktop header.
 
-### Mobile board: messaging layout
-The board on mobile reads like a chat (all via `useIsMobile()` branches in `board.tsx`; none of this touches desktop):
+### Mobile board: chat app shell
+On mobile the board is a fixed-height **app shell**, not a scrolling page — the structure real chat apps use (`isMobile` early-return in `board.tsx`; none of this touches desktop):
+
+```
+<div class="flex h-dvh flex-col">
+  header  (shrink-0)            ← back · journal title · ⋯
+  messages (flex-1 overflow-y-auto flex-col-reverse)
+  composer (shrink-0)          ← footer
+</div>
+```
+
 - The journal **title lives in the header**; there's no separate prompt heading in the body.
-- **Entries are reversed** — oldest first, newest at the bottom by the composer — and the view auto-scrolls to the bottom on open and after sending.
-- The **composer is pinned to the bottom** (`fixed inset-x-0 bottom-0`): a flex "pill" (`rounded-3xl border bg-white`, `items-end`) with an auto-growing textarea (`field-sizing: content`, `max-h-32`) and the send control **inside** it — a circular `bg-gray-700` button with a **feather** icon (the quill: writing/reflection, not a generic send arrow). `items-end` keeps it bottom-right as the text grows.
-- The composer background is a **top-fading gradient** (`bg-gradient-to-t from-[#FAF9F5] from-35% to-transparent`), no blur — content dissolves into it with no hard edge. (An earlier `backdrop-blur` version read as a visible pane; opacity does the work.)
+- **Messages use `flex-direction: column-reverse`.** Entries are rendered newest-first; column-reverse flips them to oldest-top / newest-bottom *and* makes the scroll container rest at the bottom on its own. **This is how we "start at the bottom" — never `scrollTo`/timers/`fonts.ready`.** New entries stay pinned to the bottom for free. Dividers: `border-t` on every entry except the visual-top one (`index < entries.length - 1`), since `divide-y` mis-aligns under `column-reverse`.
+- The **composer is a footer** (in flow, `shrink-0`) — it sits *below* the messages, never over them, so no blur/gradient/overlap tricks are needed. A flex "pill" (`rounded-3xl border bg-white`, `items-end`) with an auto-growing textarea (`field-sizing: content`, `max-h-32`) and the send control **inside** it — a circular `bg-gray-700` button with a **feather** icon (the quill: writing/reflection, not a generic send arrow). `items-end` keeps it bottom-right as the text grows.
+- Keyboard: `interactive-widget=resizes-content` in the viewport meta lets supporting browsers shrink the shell so the composer stays above the keyboard.
 
 Desktop keeps the original inline form (prompt heading + `min-h-32` textarea + outline Submit) and newest-first cards.
 
 ### Global controls
-- **Sync** trigger lives in the global root layout, fixed `right-2 bottom-2`, as a `ghost` `text-gray-500` button. It's intentionally quiet — Sync is an occasional action.
+- **Sync** trigger lives in the global root layout, fixed `right-2 bottom-2`, as a `ghost` `text-gray-500` button. It's intentionally quiet — Sync is an occasional action. **Exception:** on the mobile board it's hidden (the composer owns the bottom) and offered from the board's ⋯ menu instead, via the `SyncUIContext` in `src/lib/sync-ui.ts` (the board calls `useOpenSync()` to open the root-owned modal).
 - **"+" FAB** (create journal) lives on `home.tsx` only, fixed `bottom-6 left-6`, `variant='outline'` `size='icon-lg'` rounded-full.
 
 ### Forms

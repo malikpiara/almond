@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from '@tanstack/react-router';
+import { Outlet, useRouterState } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { SyncModal } from '@/components/sync-modal';
 import { ExportModal } from '@/components/export-modal';
 import { ImportModal } from '@/components/import-modal';
 import { exportData, importData, selectImportFile } from '@/utils/utils';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import { SyncUIContext } from '@/lib/sync-ui';
 
 export function RootLayout() {
   // Sync is app-global (not per-board), so it lives here in the layout.
@@ -14,6 +16,12 @@ export function RootLayout() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+
+  // On the mobile board the bottom is owned by the composer, so the floating
+  // Sync button is hidden there and offered from the board's ⋯ menu instead.
+  const isMobile = useIsMobile();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const showFloatingSync = !(isMobile && pathname.startsWith('/boards/'));
 
   const handleExport = async (password: string) => {
     const result = await exportData(password);
@@ -37,15 +45,19 @@ export function RootLayout() {
     <>
       {/* Thin "notebook spine" accent — keeps personality without crowding text */}
       <div className='fixed inset-y-0 left-0 z-20 w-2 sm:w-3 bg-amber-200 pointer-events-none' />
-      <Outlet />
+      <SyncUIContext.Provider value={() => setSyncOpen(true)}>
+        <Outlet />
+      </SyncUIContext.Provider>
 
-      <Button
-        variant='ghost'
-        className='fixed right-2 bottom-2 cursor-pointer text-gray-500'
-        onClick={() => setSyncOpen(true)}
-      >
-        Sync
-      </Button>
+      {showFloatingSync && (
+        <Button
+          variant='ghost'
+          className='fixed right-2 bottom-2 cursor-pointer text-gray-500'
+          onClick={() => setSyncOpen(true)}
+        >
+          Sync
+        </Button>
+      )}
 
       <SyncModal
         isOpen={syncOpen}
