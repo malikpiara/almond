@@ -60,6 +60,10 @@ export function Board() {
   const [optionsEntry, setOptionsEntry] = useState<Entry | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  // Defer the entry-options Drawer (vaul) past first paint: its scroll setup
+  // forces layout, which otherwise lands inside the open transition. Mounting it
+  // a frame later keeps that cost off the transition's critical path.
+  const [drawerReady, setDrawerReady] = useState(false);
   const isMobile = useIsMobile();
   const openSync = useOpenSync();
   const swipeBack = useSwipeBack(
@@ -85,6 +89,10 @@ export function Board() {
       active = false;
     };
   }, [boardId]);
+
+  useEffect(() => {
+    setDrawerReady(true);
+  }, []);
 
   async function deleteEntry(id: string) {
     await store.deleteEntry(id);
@@ -301,8 +309,10 @@ export function Board() {
           />
         </form>
 
-        {/* Entry options sheet (mirrors the desktop dropdown 1:1). */}
-        <Drawer open={optionsOpen} onOpenChange={setOptionsOpen}>
+        {/* Entry options sheet (mirrors the desktop dropdown 1:1). Deferred
+            past first paint to keep vaul's layout reads off the open. */}
+        {drawerReady && (
+          <Drawer open={optionsOpen} onOpenChange={setOptionsOpen}>
           <DrawerContent>
             <DrawerHeader className='sr-only'>
               <DrawerTitle>Entry options</DrawerTitle>
@@ -357,7 +367,8 @@ export function Board() {
               </div>
             )}
           </DrawerContent>
-        </Drawer>
+          </Drawer>
+        )}
         </div>
       </>
     );

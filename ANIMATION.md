@@ -69,6 +69,16 @@ We matched Telegram's chat-open recipe exactly and it *still* felt less smooth. 
 - A buttery transition needs **no synchronous render/layout while it runs**. Pay rendering cost *before* (gesture cover) or *after* (defer non-critical content), or make the destination cheap to render.
 - Web route transitions in a framework will rarely beat a native app's hand-tuned, recycling view system; aim for "great," and spend effort where the trace says the time goes.
 
+### What the trace named (Almond, source-mapped)
+
+The open-transition forced reflow is **constant — not list length** (it shows with 3 entries as much as 16). The culprits are **third-party libraries reading layout as the screen mounts**:
+- **vaul** (`onScroll` / `useSnapPoints`) — the Drawer attaches global scroll handling and reads layout. Mitigation: **mount the Drawer after first paint** (`drawerReady` flag) so its setup is off the transition's critical path (measurably lowered INP). It still has a global scroll listener while any Drawer is mounted, so some cost remains.
+- **sonner** (`getDocumentDirection`) — the global Toaster reads computed direction.
+
+Net: the residual hitch is library layout-reads on mount, not our code or the list. Eliminating the last of it means patching/replacing vaul + sonner — disproportionate vs. the native baseline, so we stop here with it understood.
+
+**Is it because Telegram isn't a PWA?** No. The reflow reproduces in **plain Chrome**, not just the installed PWA — an Android WebAPK runs the same Chrome engine, and the service worker only touches real navigations/fetches, not in-app client-side route changes. The real divide is **native vs. web** (Canvas + recycled views, zero main-thread layout during motion), not PWA-vs-browser.
+
 ---
 
 ## 5. Learnings from Telegram's source (Android, open source)
@@ -85,6 +95,27 @@ From [`ActionBarLayout.java`](https://github.com/DrKLO/Telegram/blob/master/TMes
 | Spring | none for the push; velocity is tracked only for swipe-back |
 
 Web translation that worked: small fixed parallax + a soft leading-edge `box-shadow` + a decelerate curve at ~150ms. The visual recipe is portable; the native runtime smoothness is not (see §4).
+
+### Telegram's easing library (reusable cubic-beziers)
+
+From [`CubicBezierInterpolator.java`](https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/ui/Components/CubicBezierInterpolator.java) — these are the curves Telegram reaches for everywhere:
+
+| Name | cubic-bezier | ≈ CSS / use |
+| --- | --- | --- |
+| `DEFAULT` | `0.25, 0.1, 0.25, 1` | CSS `ease` — general |
+| `EASE_OUT` | `0, 0, 0.58, 1` | CSS `ease-out` — enter/exit |
+| `EASE_OUT_QUINT` | `0.23, 1, 0.32, 1` | snappy, almost-instant entrance |
+| `EASE_IN` | `0.42, 0, 1, 1` | (rare) |
+| `EASE_BOTH` | `0.42, 0, 0.58, 1` | CSS `ease-in-out` — on-screen moves |
+| `EASE_OUT_BACK` | `0.34, 1.56, 0.64, 1` | **overshoot** — playful pops (reactions, badges) |
+
+They also use Material 3's **Emphasized / EmphasizedDecelerate / EmphasizedAccelerate / StandardDecelerate** (PathInterpolators) for newer transitions — worth knowing as a modern, well-tuned default set.
+
+### Other Telegram patterns worth stealing (observed / well-documented)
+
+- **Send-message morph**: the typed text in the composer animates *up into* the new message bubble (a shared-element-style morph of position + size). Directly relevant to Almond — a new entry could morph from the composer into the list rather than just fading in.
+- **Springs for the playful + interruptible** (drag, reactions, the jump-to-message highlight): velocity-aware, can be grabbed mid-flight. `EASE_OUT_BACK`-style overshoot is reserved for delight moments, not navigation.
+- **Restraint on the frequent path**: the things you do constantly (open chat, send) are fast and near-instant; the elaborate motion is saved for rarer, delightful moments.
 
 ---
 
