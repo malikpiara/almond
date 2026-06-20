@@ -185,18 +185,9 @@ Desktop keeps the original inline form (prompt heading + `min-h-32` textarea + o
 - The entry textarea is `min-h-32 resize-none rounded-lg bg-white !text-lg` — deliberately large type and a calm white surface against the cream page.
 
 ### Motion
-Almond is opened occasionally, so motion adds warmth without fatigue. Following Emil Kowalski's animations.dev guidance:
-- **Easing**: `ease-out` for enter/exit (tokens `--ease-out-cubic`, `--ease-out-quart` in `globals.css`); durations 150–300ms; animate **transform/opacity only**.
-- **New entry** animates in with `.animate-entry-appear` (fade + 8px rise, 260ms ease-out) — applied only to the just-saved entry (`justAddedId`), not the whole list.
-- **Buttons** get a press `active:scale-[0.97]` (in the Button base) for tactile feedback.
-- **Route transitions** use the **View Transitions API** (TanStack Router `viewTransition` + types), and are **platform-specific** because a full-width slide reads differently by screen size:
-  - **Mobile** — directional slide, mirroring the swipe-back. Forward (`slide-forward`) folds in the desktop morph's *depth*: the incoming board **grows in** (scale 0.94→1) as it slides from the right while the list **recedes** behind it (scale 0.94 + dim to 0.5) — snappy (180ms, `--ease-out-quint`, almost-instant). Back (`slide-back`) is a clean slide, a touch slower (280ms, `--ease-out-cubic`), and reads as "closing".
-  - **Desktop** — a full slide across a wide screen feels jarring, so the tapped journal **morphs into the board** via a shared-element transition: the card and the board column share `view-transition-name: journal-surface` (the card's name is set on click so it's unique in the snapshot), the API interpolates position+size, and the rest cross-fades (`card-morph` type).
-  - Directional/morph CSS lives in `globals.css` under `:active-view-transition-type(...)`. No duplicate rendering (unlike the swipe peek), so no width-mismatch bug. Unsupported browsers fall back to an instant nav.
-- **Swipe-back** is gesture-driven (direct manipulation) with a spring-ish snap; its `navigate()` deliberately does **not** opt into View Transitions (it already animates the slide itself). See the mobile-board notes.
-- **Journal cards** lift subtly on hover (desktop) and scale on press (`active:scale-[0.99]`).
-- **Reduced motion**: a global `@media (prefers-reduced-motion: reduce)` neutralizes transitions/animations app-wide (covers Radix/vaul). Always honor it when adding motion.
-- The mobile board shell is `fixed inset-0` so the board and the swipe-back peek share the exact same box (no width mismatch on hand-off).
+Almond is opened occasionally, so motion stays subtle (Emil Kowalski's animations.dev as the guide). Only durable rules live here — **specific transitions are being actively iterated and intentionally NOT documented until they settle** (don't write up motion mid-experiment):
+- Animate **transform/opacity only**; `ease-out` for enter/exit.
+- Honor **reduced motion**: a global `@media (prefers-reduced-motion: reduce)` neutralizes transitions/animations app-wide (incl. Radix/vaul).
 
 ---
 
