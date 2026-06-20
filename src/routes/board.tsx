@@ -59,6 +59,7 @@ export function Board() {
 
   const [optionsEntry, setOptionsEntry] = useState<Entry | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const openSync = useOpenSync();
   const swipeBack = useSwipeBack(
@@ -96,6 +97,11 @@ export function Board() {
       // Save first — instant reward, no waiting on the AI.
       const entry = await store.createEntry(boardId, content);
       setEntries(await store.getEntries(boardId));
+      setJustAddedId(entry.id); // entrance animation for the new entry
+      window.setTimeout(
+        () => setJustAddedId((id) => (id === entry.id ? null : id)),
+        500
+      );
       toast('Entry saved!');
       form.reset();
 
@@ -199,7 +205,7 @@ export function Board() {
         onTouchStart={swipeBack.onTouchStart}
         onTouchMove={swipeBack.onTouchMove}
         onTouchEnd={swipeBack.onTouchEnd}
-        className='relative z-10 flex h-dvh flex-col bg-[#FAF9F5] [touch-action:pan-y]'
+        className='fixed inset-0 z-10 flex flex-col bg-[#FAF9F5] [touch-action:pan-y]'
       >
         <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'>
           <Link
@@ -226,7 +232,7 @@ export function Board() {
               key={entry.id}
               className={`px-4 py-5 text-gray-800${
                 index < entries.length - 1 ? ' border-t border-gray-200' : ''
-              }`}
+              }${entry.id === justAddedId ? ' animate-entry-appear' : ''}`}
             >
               <p className='whitespace-pre-line leading-relaxed'>
                 {entry.content}
@@ -412,7 +418,12 @@ export function Board() {
 
       <section id='entries' className='flex flex-col gap-4 w-full'>
         {entries.map((entry) => (
-          <Card key={entry.id} className='text-gray-800'>
+          <Card
+            key={entry.id}
+            className={`text-gray-800${
+              entry.id === justAddedId ? ' animate-entry-appear' : ''
+            }`}
+          >
             <CardContent>
               <p className='whitespace-pre-line leading-relaxed'>
                 {entry.content}

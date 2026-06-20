@@ -7,6 +7,42 @@ html {
   font-size: 17px;
 }
 
+/* Motion: easing tokens (Emil Kowalski / animations.dev) + a calm new-entry
+   entrance. Used sparingly — Almond is opened occasionally, so motion adds
+   warmth rather than fatigue. */
+:root {
+  --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+@keyframes entry-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entry-appear {
+  animation: entry-appear 260ms var(--ease-out-cubic) both;
+}
+
+/* Respect users who ask for less motion: neutralize transitions/animations
+   app-wide (covers Radix/vaul too). Gesture-driven direct manipulation stays. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

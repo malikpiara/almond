@@ -184,6 +184,15 @@ Desktop keeps the original inline form (prompt heading + `min-h-32` textarea + o
 - React Hook Form + Zod + shadcn `Field`/`FieldError`/`FieldGroup`.
 - The entry textarea is `min-h-32 resize-none rounded-lg bg-white !text-lg` — deliberately large type and a calm white surface against the cream page.
 
+### Motion
+Almond is opened occasionally, so motion adds warmth without fatigue. Following Emil Kowalski's animations.dev guidance:
+- **Easing**: `ease-out` for enter/exit (tokens `--ease-out-cubic`, `--ease-out-quart` in `globals.css`); durations 150–300ms; animate **transform/opacity only**.
+- **New entry** animates in with `.animate-entry-appear` (fade + 8px rise, 260ms ease-out) — applied only to the just-saved entry (`justAddedId`), not the whole list.
+- **Buttons** get a press `active:scale-[0.97]` (in the Button base) for tactile feedback.
+- **Swipe-back** is gesture-driven (direct manipulation) with a spring-ish snap; see the mobile-board notes.
+- **Reduced motion**: a global `@media (prefers-reduced-motion: reduce)` neutralizes transitions/animations app-wide (covers Radix/vaul). Always honor it when adding motion.
+- The mobile board shell is `fixed inset-0` so the board and the swipe-back peek share the exact same box (no width mismatch on hand-off).
+
 ---
 
 ## 7. Responsive philosophy
