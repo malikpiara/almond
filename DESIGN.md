@@ -170,7 +170,9 @@ On mobile the board is a fixed-height **app shell**, not a scrolling page — th
 - The journal **title lives in the header**; there's no separate prompt heading in the body.
 - **Messages use `flex-direction: column-reverse`.** Entries are rendered newest-first; column-reverse flips them to oldest-top / newest-bottom *and* makes the scroll container rest at the bottom on its own. **This is how we "start at the bottom" — never `scrollTo`/timers/`fonts.ready`.** New entries stay pinned to the bottom for free. Dividers: `border-t` on every entry except the visual-top one (`index < entries.length - 1`), since `divide-y` mis-aligns under `column-reverse`.
 - The **composer is a footer** (in flow, `shrink-0`) — it sits *below* the messages, never over them, so no blur/gradient/overlap tricks are needed. A flex "pill" (`rounded-3xl border bg-white`, `items-end`) with an auto-growing textarea (`field-sizing: content`, `max-h-32`) and the send control **inside** it — a circular `bg-gray-700` button with a **feather** icon (the quill: writing/reflection, not a generic send arrow). `items-end` keeps it bottom-right as the text grows.
+- Entry dividers are **full-bleed** (`border-t` on the `px-4` article; the scroll container has no horizontal padding) so the line runs edge to edge.
 - Keyboard: `interactive-widget=resizes-content` in the viewport meta lets supporting browsers shrink the shell so the composer stays above the keyboard.
+- **Swipe-back is interactive** (`useSwipeBack`): an edge pan (starts within 30px of the left edge) drags the whole screen with the finger via a direct `translateX`, then completes (slides off → navigate) past 40% width or snaps back. iOS/Telegram-style, not an instant jump.
 
 Desktop keeps the original inline form (prompt heading + `min-h-32` textarea + outline Submit) and newest-first cards.
 

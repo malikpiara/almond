@@ -180,8 +180,14 @@ export function Board() {
     // Mobile: a chat-style app shell — fixed header, a column-reverse message
     // area (rests at the bottom by itself, no scroll scripting), composer footer.
     return (
-      <div className='flex h-dvh flex-col' {...swipeBack}>
-        <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 py-2'>
+      <div
+        ref={swipeBack.ref}
+        onTouchStart={swipeBack.onTouchStart}
+        onTouchMove={swipeBack.onTouchMove}
+        onTouchEnd={swipeBack.onTouchEnd}
+        className='flex h-dvh flex-col bg-[#FAF9F5] [touch-action:pan-y]'
+      >
+        <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'>
           <Link
             to='/journals'
             aria-label='Back to journals'
@@ -199,12 +205,12 @@ export function Board() {
             the scroll naturally rests there — the chat-app trick, no JS scroll. */}
         <div
           id='entries'
-          className='flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-4'
+          className='flex min-h-0 flex-1 flex-col-reverse overflow-y-auto'
         >
           {entries.map((entry, index) => (
             <article
               key={entry.id}
-              className={`py-5 text-gray-800${
+              className={`px-4 py-5 text-gray-800${
                 index < entries.length - 1 ? ' border-t border-gray-200' : ''
               }`}
             >
