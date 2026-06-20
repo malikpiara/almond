@@ -12,7 +12,7 @@
     "worker:dev": "wrangler dev --config worker/wrangler.toml --port 8787",
     "worker:deploy": "wrangler deploy --config worker/wrangler.toml",
     "worker:secret": "wrangler secret put ANTHROPIC_API_KEY --config worker/wrangler.toml",
-    "pages:deploy": "pnpm build && wrangler pages deploy dist --project-name almond"
+    "pages:deploy": "pnpm build && wrangler pages deploy dist --project-name almond --branch main --commit-dirty=true"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
