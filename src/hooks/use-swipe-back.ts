@@ -1,23 +1,44 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { TouchEvent } from 'react';
 
 const EDGE = 30; // gesture must start within this many px of the left edge
 const COMMIT_RATIO = 0.4; // drag past 40% of the width to go back
+const PARALLAX = 0.3; // destination starts 30% off-screen-left and slides in
 
 /**
- * Interactive iOS/Telegram-style swipe-back: an edge pan that drags the whole
- * screen with the finger, then either completes (slides off → onBack) or snaps
- * back. Returns a ref for the screen element plus touch handlers to spread on it.
+ * Interactive iOS/Telegram-style swipe-back with a destination peek.
  *
- * Edge-only start + a vertical-bail keep it from fighting the message list's
- * vertical scroll or text selection. The transform is written straight to the
- * node (no per-frame React state) so the drag stays smooth.
+ * An edge pan drags the foreground screen (`ref`) right with the finger while
+ * the destination screen (`peekRef`) parallaxes in behind it. Past the commit
+ * threshold it completes (foreground slides off, destination settles, then
+ * onBack navigates for real); otherwise both snap back.
+ *
+ * `peeking` tells the caller to mount the destination layer only during a drag.
+ * Transforms are written straight to the nodes (no per-frame React state) so the
+ * drag stays smooth. Edge-only start + a vertical-bail keep it from fighting the
+ * message list's scroll.
  */
 export function useSwipeBack(onBack: () => void, enabled = true) {
   const ref = useRef<HTMLDivElement>(null);
+  const peekRef = useRef<HTMLDivElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
   const dx = useRef(0);
+  const [peeking, setPeeking] = useState(false);
+
+  function setFrame(distance: number) {
+    const w = window.innerWidth;
+    if (ref.current) {
+      ref.current.style.transform = `translateX(${distance}px)`;
+      ref.current.style.boxShadow = '-12px 0 28px rgba(0,0,0,0.12)';
+    }
+    if (peekRef.current) {
+      const progress = Math.min(1, distance / w);
+      peekRef.current.style.transform = `translateX(${
+        -PARALLAX * w * (1 - progress)
+      }px)`;
+    }
+  }
 
   function onTouchStart(e: TouchEvent) {
     if (!enabled) {
@@ -44,8 +65,7 @@ export function useSwipeBack(onBack: () => void, enabled = true) {
   }
 
   function onTouchMove(e: TouchEvent) {
-    const el = ref.current;
-    if (!start.current || !el) return;
+    if (!start.current) return;
     const t = e.touches[0];
     const mx = t.clientX - start.current.x;
     const my = t.clientY - start.current.y;
@@ -56,32 +76,44 @@ export function useSwipeBack(onBack: () => void, enabled = true) {
         return;
       }
       dragging.current = true;
-      el.style.transition = 'none';
-      el.style.willChange = 'transform';
+      setPeeking(true); // mount the destination layer
+      if (ref.current) {
+        ref.current.style.transition = 'none';
+        ref.current.style.willChange = 'transform';
+      }
     }
+    if (peekRef.current) peekRef.current.style.transition = 'none';
     dx.current = Math.max(0, mx);
-    el.style.transform = `translateX(${dx.current}px)`;
-    el.style.boxShadow = '-12px 0 28px rgba(0,0,0,0.10)';
+    setFrame(dx.current);
   }
 
   function onTouchEnd() {
-    const el = ref.current;
     const wasDragging = dragging.current;
     const distance = dx.current;
     start.current = null;
     dragging.current = false;
     dx.current = 0;
-    if (!wasDragging || !el) return;
+    if (!wasDragging) return;
 
-    el.style.transition = 'transform 0.2s ease-out';
-    if (distance > window.innerWidth * COMMIT_RATIO) {
-      el.style.transform = 'translateX(100%)';
-      window.setTimeout(onBack, 190);
+    const w = window.innerWidth;
+    if (ref.current) ref.current.style.transition = 'transform 0.22s ease-out';
+    if (peekRef.current)
+      peekRef.current.style.transition = 'transform 0.22s ease-out';
+
+    if (distance > w * COMMIT_RATIO) {
+      if (ref.current) ref.current.style.transform = 'translateX(100%)';
+      if (peekRef.current) peekRef.current.style.transform = 'translateX(0)';
+      window.setTimeout(onBack, 200);
     } else {
-      el.style.transform = 'translateX(0)';
-      el.style.boxShadow = '';
+      if (ref.current) {
+        ref.current.style.transform = 'translateX(0)';
+        ref.current.style.boxShadow = '';
+      }
+      if (peekRef.current)
+        peekRef.current.style.transform = `translateX(${-PARALLAX * w}px)`;
+      window.setTimeout(() => setPeeking(false), 220);
     }
   }
 
-  return { ref, onTouchStart, onTouchMove, onTouchEnd };
+  return { ref, peekRef, peeking, onTouchStart, onTouchMove, onTouchEnd };
 }

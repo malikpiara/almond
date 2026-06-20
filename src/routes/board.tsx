@@ -28,6 +28,7 @@ import {
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSwipeBack } from '@/hooks/use-swipe-back';
 import { useOpenSync } from '@/lib/sync-ui';
+import { Home } from '@/routes/home';
 import { store } from '@/lib/store';
 import { extractEntities } from '@/lib/api';
 import type { Board as BoardType, Entry } from '@/types';
@@ -180,12 +181,25 @@ export function Board() {
     // Mobile: a chat-style app shell — fixed header, a column-reverse message
     // area (rests at the bottom by itself, no scroll scripting), composer footer.
     return (
+      <>
+        {/* Destination peek: the Journals screen parallaxes in behind the board
+            during a swipe-back, then the real route takes over on commit. */}
+        {swipeBack.peeking && (
+        <div
+          ref={swipeBack.peekRef}
+          aria-hidden
+          style={{ transform: 'translateX(-30%)' }}
+          className='fixed inset-0 z-0 overflow-hidden bg-[#FAF9F5]'
+        >
+          <Home />
+        </div>
+      )}
       <div
         ref={swipeBack.ref}
         onTouchStart={swipeBack.onTouchStart}
         onTouchMove={swipeBack.onTouchMove}
         onTouchEnd={swipeBack.onTouchEnd}
-        className='flex h-dvh flex-col bg-[#FAF9F5] [touch-action:pan-y]'
+        className='relative z-10 flex h-dvh flex-col bg-[#FAF9F5] [touch-action:pan-y]'
       >
         <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'>
           <Link
@@ -337,7 +351,8 @@ export function Board() {
             )}
           </DrawerContent>
         </Drawer>
-      </div>
+        </div>
+      </>
     );
   }
 
