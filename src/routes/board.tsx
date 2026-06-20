@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon } from 'lucide-react';
 
 import { ImportModal } from '@/components/import-modal';
@@ -36,6 +36,7 @@ const formSchema = z.object({
 
 export function Board() {
   const { id: boardId } = useParams({ from: '/boards/$id' });
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -163,6 +164,36 @@ export function Board() {
       >
         ← Journals
       </Link>
+      <div className='fixed right-6 top-3'>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant='ghost'
+              className='cursor-pointer text-gray-500'
+              aria-label='Journal options'
+            >
+              <MoreHorizontalIcon />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end'>
+            <DropdownMenuItem
+              className='cursor-pointer'
+              onClick={async () => {
+                if (
+                  confirm(
+                    'Delete this journal? Its entries will be hidden too.'
+                  )
+                ) {
+                  await store.deleteBoard(boardId);
+                  navigate({ to: '/journals' });
+                }
+              }}
+            >
+              Delete this journal
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <form
         id='form-rhf-demo'
         className='space-y-4 w-full'

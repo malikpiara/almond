@@ -18,6 +18,9 @@ import { migrate, wrap } from '@/lib/schema';
 const KEY = 'user-data';
 
 const DEFAULT_PROMPT = 'What are you grateful for today?';
+// Fixed id so the first-run default board seeded independently on each device
+// converges to ONE board after a sync merge (instead of duplicating).
+const DEFAULT_BOARD_ID = 'board_default';
 
 /** Full dataset including soft-deleted tombstones (needed for sync merges). */
 function readRaw(): UserData {
@@ -51,7 +54,7 @@ export const store = {
       const seeded: UserData = {
         boards: [
           {
-            id: generateBoardId(),
+            id: DEFAULT_BOARD_ID,
             prompt: DEFAULT_PROMPT,
             createdAt: Date.now(),
             isDeleted: false,
@@ -131,6 +134,18 @@ export const store = {
       ...data,
       entries: data.entries.map((e) =>
         e.id === id ? { ...e, isDeleted: true } : e
+      ),
+    });
+    triggerSync();
+  },
+
+  /** Soft-delete a board (tombstone propagates across devices via sync). */
+  async deleteBoard(id: string): Promise<void> {
+    const data = readRaw();
+    writeRaw({
+      ...data,
+      boards: data.boards.map((b) =>
+        b.id === id ? { ...b, isDeleted: true } : b
       ),
     });
     triggerSync();
