@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
-import { MoreHorizontalIcon } from 'lucide-react';
+import { MoreHorizontalIcon, ArrowLeft, Feather } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -82,6 +82,14 @@ export function Board() {
     };
   }, [boardId]);
 
+  // Mobile messaging layout: land at the bottom (newest entry) once loaded.
+  useEffect(() => {
+    if (!isMobile || loading) return;
+    requestAnimationFrame(() =>
+      window.scrollTo({ top: document.documentElement.scrollHeight })
+    );
+  }, [isMobile, loading]);
+
   async function deleteEntry(id: string) {
     await store.deleteEntry(id);
     setEntries(await store.getEntries(boardId));
@@ -95,6 +103,11 @@ export function Board() {
       setEntries(await store.getEntries(boardId));
       toast('Entry saved!');
       form.reset();
+      if (isMobile) {
+        requestAnimationFrame(() =>
+          window.scrollTo({ top: document.documentElement.scrollHeight })
+        );
+      }
 
       // Enrich with people/places in the background; patch the entry when it
       // lands. extractEntities never throws (empty on failure).
@@ -174,13 +187,17 @@ export function Board() {
     >
       {isMobile ? (
         // Mobile: sticky translucent header bar.
-        <div className='sticky top-0 z-10 -mx-4 px-4 py-3 flex items-center justify-between bg-[#FAF9F5]/80 backdrop-blur-sm'>
+        <div className='sticky top-0 z-10 -mx-4 px-3 py-2 flex items-center gap-1 bg-[#FAF9F5]'>
           <Link
             to='/journals'
-            className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+            aria-label='Back to journals'
+            className='shrink-0 p-1 text-gray-500 hover:text-gray-800 cursor-pointer'
           >
-            ← Journals
+            <ArrowLeft className='h-5 w-5' />
           </Link>
+          <h1 className='min-w-0 flex-1 truncate text-center text-base font-medium text-gray-800'>
+            {board.prompt}
+          </h1>
           {journalMenu}
         </div>
       ) : (
@@ -196,53 +213,58 @@ export function Board() {
         </>
       )}
 
-      <form
-        id='form-rhf-demo'
-        className='space-y-4 w-full'
-        onSubmit={form.handleSubmit(onSubmit)}
-      >
-        <FieldGroup>
-          <Controller
-            name='description'
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 sm:mt-20'>
-                  {board.prompt}
-                </h1>
-                <InputGroup>
-                  <InputGroupTextarea
-                    {...field}
-                    id='form-rhf-demo-description'
-                    placeholder='Take a moment to reflect…'
-                    className='min-h-32 resize-none rounded-lg bg-white !text-lg'
-                    aria-invalid={fieldState.invalid}
-                  />
-                </InputGroup>
+      {/* Mobile: prompt lives in the header; entries + composer only. */}
+      {!isMobile && (
+        // Desktop: original inline form (prompt + textarea + Submit).
+        <form
+          id='form-rhf-demo'
+          className='space-y-4 w-full'
+          onSubmit={form.handleSubmit(onSubmit)}
+        >
+          <FieldGroup>
+            <Controller
+              name='description'
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800 sm:mt-20'>
+                    {board.prompt}
+                  </h1>
+                  <InputGroup>
+                    <InputGroupTextarea
+                      {...field}
+                      id='form-rhf-demo-description'
+                      placeholder='Take a moment to reflect…'
+                      className='min-h-32 resize-none rounded-lg bg-white !text-lg'
+                      aria-invalid={fieldState.invalid}
+                    />
+                  </InputGroup>
 
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
-              </Field>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+          </FieldGroup>
+          <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
+            <Button type='submit' variant='outline' form='form-rhf-demo'>
+              Submit
+            </Button>
+            {isAnalyzing && (
+              <span className='text-sm text-gray-500'>
+                Tagging people and places…
+              </span>
             )}
-          />
-        </FieldGroup>
-        <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-          <Button type='submit' variant='outline' form='form-rhf-demo'>
-            Submit
-          </Button>
-          {isAnalyzing && (
-            <span className='text-sm text-gray-500'>
-              Tagging people and places…
-            </span>
-          )}
-        </div>
-      </form>
+          </div>
+        </form>
+      )}
 
       {/* Desktop: cards (your original treatment). Mobile: full-bleed divider rows. */}
       {isMobile ? (
         <section id='entries' className='-mx-4 divide-y divide-gray-200'>
-          {entries.map((entry) => (
+          {/* Reversed so newest sits at the bottom, by the composer (chat-style). */}
+          {[...entries].reverse().map((entry) => (
             <article key={entry.id} className='px-4 py-5 text-gray-800'>
               <p className='whitespace-pre-line leading-relaxed'>
                 {entry.content}
@@ -331,6 +353,51 @@ export function Board() {
             </Card>
           ))}
         </section>
+      )}
+
+      {/* Mobile: messaging-style composer pinned to the bottom. */}
+      {isMobile && (
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className='fixed inset-x-0 bottom-0 z-30 px-3 pt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-[#FAF9F5] from-35% to-transparent'
+        >
+          <Controller
+            name='description'
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <>
+                {fieldState.invalid && fieldState.error && (
+                  <p className='px-3 pb-1 text-sm text-destructive'>
+                    {fieldState.error.message}
+                  </p>
+                )}
+                {isAnalyzing && (
+                  <p className='px-3 pb-1 text-sm text-gray-500'>
+                    Tagging people and places…
+                  </p>
+                )}
+                <div className='flex items-end gap-1.5 rounded-3xl border border-gray-200 bg-white py-1.5 pl-4 pr-1.5 focus-within:ring-2 focus-within:ring-gray-300'>
+                  <textarea
+                    {...field}
+                    rows={1}
+                    placeholder='Take a moment to reflect…'
+                    aria-invalid={fieldState.invalid}
+                    className='flex-1 resize-none bg-transparent py-1.5 text-base leading-snug max-h-32 [field-sizing:content] focus:outline-none'
+                  />
+                  <Button
+                    type='submit'
+                    size='icon'
+                    disabled={!field.value?.trim()}
+                    aria-label='Save entry'
+                    className='size-9 shrink-0 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-40'
+                  >
+                    <Feather className='size-[18px]' />
+                  </Button>
+                </div>
+              </>
+            )}
+          />
+        </form>
       )}
 
       {/* Mobile-only sheet that mirrors the desktop dropdown 1:1 — same

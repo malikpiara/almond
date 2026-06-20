@@ -153,8 +153,17 @@ Where two implementations exist for the same surface (desktop vs. mobile), both 
 ### Sticky translucent header
 Pattern: `sticky top-0 z-10 -mx-{container-px} px-{container-px} py-3 bg-[#FAF9F5]/80 backdrop-blur-sm`. The negative margins let the header span the full container width while the rest of the page keeps its inset.
 
-- `home.tsx` uses it at both viewports (the "Your Journals" title bar).
-- `board.tsx` uses it **only on mobile** (← Journals + ⋯, via a `useIsMobile()` branch). On desktop the board keeps its original **fixed-corner** controls (`← Journals` at `fixed left-6 top-4`, `⋯` at `fixed right-6 top-3`) and a vertically-centered `max-w-3xl` column — that desktop layout is deliberate; don't replace it with the sticky bar.
+- `home.tsx` uses it at both viewports (the "Your Journals" title bar), translucent.
+- `board.tsx` has its own header **only on mobile** (`useIsMobile()` branch): a **solid** `bg-[#FAF9F5]` bar (`py-2`) holding `←` back (`ArrowLeft`) + the **journal prompt as a truncated title** + `⋯`. Solid, not translucent, on purpose — the blur produced a visible seam. On desktop the board keeps its original **fixed-corner** controls (`← Journals` at `fixed left-6 top-4`, `⋯` at `fixed right-6 top-3`) and a vertically-centered `max-w-3xl` column — deliberate; don't replace it with the bar, and don't move the prompt into a desktop header.
+
+### Mobile board: messaging layout
+The board on mobile reads like a chat (all via `useIsMobile()` branches in `board.tsx`; none of this touches desktop):
+- The journal **title lives in the header**; there's no separate prompt heading in the body.
+- **Entries are reversed** — oldest first, newest at the bottom by the composer — and the view auto-scrolls to the bottom on open and after sending.
+- The **composer is pinned to the bottom** (`fixed inset-x-0 bottom-0`): a flex "pill" (`rounded-3xl border bg-white`, `items-end`) with an auto-growing textarea (`field-sizing: content`, `max-h-32`) and the send control **inside** it — a circular `bg-gray-700` button with a **feather** icon (the quill: writing/reflection, not a generic send arrow). `items-end` keeps it bottom-right as the text grows.
+- The composer background is a **top-fading gradient** (`bg-gradient-to-t from-[#FAF9F5] from-35% to-transparent`), no blur — content dissolves into it with no hard edge. (An earlier `backdrop-blur` version read as a visible pane; opacity does the work.)
+
+Desktop keeps the original inline form (prompt heading + `min-h-32` textarea + outline Submit) and newest-first cards.
 
 ### Global controls
 - **Sync** trigger lives in the global root layout, fixed `right-2 bottom-2`, as a `ghost` `text-gray-500` button. It's intentionally quiet — Sync is an occasional action.
