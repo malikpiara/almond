@@ -14,6 +14,9 @@ html {
   --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
   --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
   --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Approximates Android's DecelerateInterpolator (gentle quadratic ease-out)
+     that Telegram uses for its chat-open push. */
+  --ease-decelerate: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @keyframes entry-appear {
@@ -41,7 +44,7 @@ html {
 }
 @keyframes vt-out-left {
   to {
-    transform: translateX(-30%);
+    transform: translateX(-48px);
   }
 }
 @keyframes vt-in-left {
@@ -65,15 +68,18 @@ html {
    settle — the incoming board leads, the list parallaxes out behind it. */
 html:active-view-transition-type(slide-forward)::view-transition-old(root) {
   animation-name: vt-out-left;
-  animation-duration: 120ms;
-  animation-timing-function: var(--ease-out-quint);
+  animation-duration: 150ms;
+  animation-timing-function: var(--ease-decelerate);
   z-index: 0;
 }
 html:active-view-transition-type(slide-forward)::view-transition-new(root) {
   animation-name: vt-in-right;
-  animation-duration: 120ms;
-  animation-timing-function: var(--ease-out-quint);
+  animation-duration: 150ms;
+  animation-timing-function: var(--ease-decelerate);
   z-index: 1;
+  /* Telegram's layerShadowDrawable: a soft shadow on the incoming screen's
+     leading edge gives depth and masks the seam. */
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
 }
 /* Back (return to journals): the board slides off to reveal the list. */
 html:active-view-transition-type(slide-back)::view-transition-old(root) {
