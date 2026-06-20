@@ -1,0 +1,7 @@
+name = "almond-extract"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+# ANTHROPIC_API_KEY is NOT set here. It is provided as:
+#   - local dev: worker/.dev.vars (gitignored)
+#   - production: `wrangler secret put ANTHROPIC_API_KEY`

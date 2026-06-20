@@ -2,11 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Almond</title>
-    <meta name="description" content="Mindful Cuiff" />
+    <meta name="description" content="A local-first, private journaling app." />
     <meta name="theme-color" content="#FAF9F5" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Installable PWA (manifest is mostly ignored by iOS Safari) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Almond" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
   </head>
   <body class="antialiased bg-[#FAF9F5]">
     <div id="root"></div>

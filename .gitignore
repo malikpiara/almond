@@ -36,3 +36,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# cloudflare worker local secrets + dev state
+.dev.vars
+.wrangler
