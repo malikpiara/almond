@@ -1,6 +1,18 @@
+import { isToday, isYesterday, isThisYear, format } from 'date-fns';
 import { store } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/crypto';
 import { ForwardCompatError } from '@/lib/schema';
+
+// Calendar-relative date for journal entries. People think about entries by
+// the day they happened ("Yesterday", "3 March"), not elapsed time
+// ("17 hours ago"), so we frame by calendar: Today / Yesterday / "3 March"
+// (this year) / "3 March 2024" (older).
+export function formatEntryDate(timestamp: number): string {
+  const date = new Date(timestamp);
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return isThisYear(date) ? format(date, 'd MMMM') : format(date, 'd MMMM yyyy');
+}
 
 export function generateShortId() {
   return Math.random().toString(36).substring(2, 15);

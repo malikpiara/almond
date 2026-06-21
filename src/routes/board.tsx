@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { formatDistanceToNow } from 'date-fns';
+import { formatEntryDate } from '@/utils/utils';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon, ArrowLeft, Feather } from 'lucide-react';
 
@@ -291,7 +291,7 @@ export function Board() {
               </p>
               <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
                 <span>
-                  {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+                  {formatEntryDate(entry.timestamp)}
                 </span>
                 <Button
                   variant='ghost'
@@ -493,7 +493,7 @@ export function Board() {
               </p>
               <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
                 <span>
-                  {formatDistanceToNow(entry.timestamp, { addSuffix: true })}
+                  {formatEntryDate(entry.timestamp)}
                 </span>
                 <DropdownMenu modal={true}>
                   <DropdownMenuTrigger asChild>
