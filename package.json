@@ -12,7 +12,9 @@
     "worker:dev": "wrangler dev --config worker/wrangler.toml --port 8787",
     "worker:deploy": "wrangler deploy --config worker/wrangler.toml",
     "worker:secret": "wrangler secret put ANTHROPIC_API_KEY --config worker/wrangler.toml",
-    "pages:deploy": "pnpm build && wrangler pages deploy dist --project-name almond --branch main --commit-dirty=true"
+    "pages:deploy": "pnpm build && wrangler pages deploy dist --project-name almond --branch main --commit-dirty=true",
+    "android:sync": "pnpm build && cap sync android",
+    "android:run": "pnpm build && cap run android"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
