@@ -2,6 +2,8 @@ import type { UserData } from '@/types';
 import { store } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/crypto';
 import { migrate, wrap, merge, hasEntities, ForwardCompatError } from '@/lib/schema';
+import { isNative } from '@/platform';
+import { GoogleAuth } from '@/platform/google-auth';
 
 /**
  * End-to-end-encrypted sync of the journal to the user's own Google Drive
@@ -153,6 +155,12 @@ function requestToken(interactive: boolean): Promise<string> {
 }
 
 async function getToken(interactive: boolean): Promise<string> {
+  // Native (Android): silent token via the OS broker — no popup, no gesture.
+  // Web: the GIS implicit flow (popup, gesture-gated).
+  if (isNative()) {
+    const { accessToken: nativeToken } = await GoogleAuth.getToken({ interactive });
+    return nativeToken;
+  }
   if (accessToken && Date.now() < tokenExpiry) return accessToken;
   return requestToken(interactive);
 }

@@ -22,7 +22,9 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { isNative } from '@/platform';
+import { isConnected } from '@/lib/drive';
 import { ReminderControl } from '@/components/reminder-control';
+import { PairLink } from '@/components/pair-link';
 
 export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -116,6 +118,9 @@ export function Home() {
           </Link>
         ))}
       </section>
+
+      {/* Native-only: pair this device to load the real journal (TEMP spike). */}
+      {isNative() && !isConnected() && <PairLink />}
 
       {/* Native-only: the daily-reminder lever we're validating (no-op on web). */}
       {isNative() && <ReminderControl />}
