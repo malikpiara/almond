@@ -4,6 +4,7 @@ A local-first, private daily self-reflection journal.
 
 - **Why** (product intent, north-star, architectural philosophy): [PRODUCT.md](PRODUCT.md)
 - **How it looks and reads** (palette, type, spacing, components, anti-patterns): [DESIGN.md](DESIGN.md)
+- **Native app** (Android via Capacitor — build, architecture, pairing): [NATIVE.md](NATIVE.md)
 
 ## Stack
 
@@ -12,6 +13,7 @@ A local-first, private daily self-reflection journal.
 - **Sync**: end-to-end encrypted blob in Google Drive `appDataFolder`. AES-256-GCM + PBKDF2 in `src/lib/crypto.ts`. Device pairing via QR (key in the URL fragment, never sent to a server).
 - **Entity extraction**: Cloudflare Worker (`worker/`) calls Anthropic. The SPA never holds the API key.
 - **Host**: Cloudflare Pages (`almond-49g.pages.dev`) + Worker (`almond-extract.upfra-me.workers.dev`).
+- **Native (Android)**: Capacitor wraps the web build; native Google auth (silent Drive token) + local-notification reminders, behind `src/platform/` seams. See [NATIVE.md](NATIVE.md).
 
 ## Develop
 
@@ -46,6 +48,7 @@ pnpm worker:secret    # rotates the Worker's ANTHROPIC_API_KEY secret
 | `/journals` | `src/routes/home.tsx` | List of journals; create a new one. |
 | `/boards/$id` | `src/routes/board.tsx` | The journal: prompt + textarea + entries. |
 | `/link` | `src/routes/link-device.tsx` | QR pairing receiver — reads the key from the URL fragment, syncs. |
+| `/settings` | `src/routes/settings.tsx` | Native-only: reminder, pairing, weekly reflection stat. Reached via a discreet gear on Journals. |
 
 ## Layout
 
@@ -55,10 +58,12 @@ src/
   components/    feature components (sync-modal, responsive-dialog, …)
     ui/          shadcn primitives
   lib/           store, crypto, drive sync, api client, schema/migration
-  hooks/         useIsMobile, useSwipeBack
+  hooks/         useIsMobile, useSwipeBack, useDriveAutoSync, useAndroidBack, useDeepLink
+  platform/      native capability seams (isNative, auth, notifications) — web + Capacitor impls
 worker/          Cloudflare Worker for entity extraction (Anthropic-backed)
-public/          PWA icons, manifest
-scripts/         icon generation
+public/          PWA icons, manifest, .well-known/assetlinks.json (App Links)
+android/         Capacitor Android project (see NATIVE.md)
+scripts/         icon + app-icon generation
 ```
 
 ## Secrets
