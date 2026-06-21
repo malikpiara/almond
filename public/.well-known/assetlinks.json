@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.moonwith.almond",
+      "sha256_cert_fingerprints": [
+        "DE:99:5D:0A:A7:D1:9F:17:94:B7:C6:8E:E9:55:3F:F4:98:91:E7:D1:1F:65:03:C8:CA:EE:F3:E1:17:5A:0E:57"
+      ]
+    }
+  }
+]
