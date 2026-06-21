@@ -21,10 +21,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { isNative } from '@/platform';
-import { isConnected } from '@/lib/drive';
-import { ReminderControl } from '@/components/reminder-control';
-import { PairLink } from '@/components/pair-link';
 
 export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -95,9 +93,21 @@ export function Home() {
 
   return (
     <div className='max-w-4xl mx-auto flex flex-col min-h-screen gap-6 px-6 sm:px-8 pb-28'>
-      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
-        Your Journals
-      </h1>
+      <div className='sticky top-0 z-10 -mx-6 sm:-mx-8 flex items-center justify-between gap-2 px-6 sm:px-8 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-[#FAF9F5]/80 backdrop-blur-sm'>
+        <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
+          Your Journals
+        </h1>
+        {isNative() && (
+          <Link
+            to='/settings'
+            aria-label='Settings'
+            viewTransition={{ types: ['slide-forward'] }}
+            className='shrink-0 p-1 text-gray-400 hover:text-gray-700 cursor-pointer'
+          >
+            <SettingsIcon className='h-5 w-5' />
+          </Link>
+        )}
+      </div>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (
           <Link
@@ -118,12 +128,6 @@ export function Home() {
           </Link>
         ))}
       </section>
-
-      {/* Native-only: pair this device to load the real journal (TEMP spike). */}
-      {isNative() && !isConnected() && <PairLink />}
-
-      {/* Native-only: the daily-reminder lever we're validating (no-op on web). */}
-      {isNative() && <ReminderControl />}
 
       {isMobile ? (
         <Drawer open={createOpen} onOpenChange={setCreateOpen}>

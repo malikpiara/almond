@@ -13,6 +13,7 @@ import { Home } from './routes/home';
 import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
 import { LinkDevice } from './routes/link-device';
+import { Settings } from './routes/settings';
 import { isNative } from './platform';
 
 // Register the PWA service worker on web only. Inside the Capacitor WebView the
@@ -51,11 +52,18 @@ const linkRoute = createRoute({
   component: LinkDevice,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: Settings,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   journalsRoute,
   boardRoute,
   linkRoute,
+  settingsRoute,
 ]);
 
 const router = createRouter({ routeTree });

@@ -90,14 +90,6 @@ export function ReminderControl() {
           />
         </div>
       )}
-
-      {/* TEMP (spike): verify delivery without waiting for the daily time. */}
-      <button
-        onClick={() => notifications.sendTestNotification()}
-        className='mt-3 cursor-pointer text-sm text-gray-400 underline underline-offset-2'
-      >
-        Send test notification
-      </button>
     </section>
   );
 }

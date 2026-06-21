@@ -22,6 +22,21 @@ export interface NotificationsProvider {
 // than stacking duplicates.
 const DAILY_REMINDER_ID = 1;
 const TEST_NOTIFICATION_ID = 999;
+// A high-importance channel so the reminder banners (heads-up) instead of
+// landing silently in the shade. Channel importance is fixed at creation.
+const CHANNEL_ID = 'daily-reminder';
+
+async function ensureChannel() {
+  const { LocalNotifications } = await import('@capacitor/local-notifications');
+  await LocalNotifications.createChannel({
+    id: CHANNEL_ID,
+    name: 'Daily reminder',
+    description: 'Your daily nudge to reflect',
+    importance: 5, // HIGH → heads-up banner
+    visibility: 1, // public on the lock screen
+    vibration: true,
+  });
+}
 
 // Web has no reliable scheduled-local-notification primitive, and the whole
 // point of the native spike is to validate reminders on Android — so on web
@@ -50,6 +65,7 @@ const nativeNotifications: NotificationsProvider = {
     return res.display === 'granted';
   },
   async scheduleDailyReminder(time) {
+    await ensureChannel();
     const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.schedule({
       notifications: [
@@ -57,6 +73,7 @@ const nativeNotifications: NotificationsProvider = {
           id: DAILY_REMINDER_ID,
           title: 'A moment to reflect',
           body: 'Take a minute to write down a thought.',
+          channelId: CHANNEL_ID,
           // `on` + repeats fires daily at this local time.
           schedule: {
             on: { hour: time.hour, minute: time.minute },
@@ -74,6 +91,7 @@ const nativeNotifications: NotificationsProvider = {
     });
   },
   async sendTestNotification() {
+    await ensureChannel();
     const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.schedule({
       notifications: [
@@ -81,6 +99,7 @@ const nativeNotifications: NotificationsProvider = {
           id: TEST_NOTIFICATION_ID,
           title: 'A moment to reflect',
           body: 'This is a test — your daily reminder will look like this.',
+          channelId: CHANNEL_ID,
           schedule: { at: new Date(Date.now() + 3000) },
         },
       ],
