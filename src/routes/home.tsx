@@ -21,6 +21,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { isNative } from '@/platform';
+import { ReminderControl } from '@/components/reminder-control';
 
 export function Home() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -91,7 +93,7 @@ export function Home() {
 
   return (
     <div className='max-w-4xl mx-auto flex flex-col min-h-screen gap-6 px-6 sm:px-8 pb-28'>
-      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-3 bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
+      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
         Your Journals
       </h1>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
@@ -114,6 +116,9 @@ export function Home() {
           </Link>
         ))}
       </section>
+
+      {/* Native-only: the daily-reminder lever we're validating (no-op on web). */}
+      {isNative() && <ReminderControl />}
 
       {isMobile ? (
         <Drawer open={createOpen} onOpenChange={setCreateOpen}>

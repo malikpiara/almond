@@ -13,11 +13,15 @@ export interface NotificationsProvider {
   scheduleDailyReminder(time: ReminderTime): Promise<void>;
   /** Cancel the daily reflection reminder if one is scheduled. */
   cancelDailyReminder(): Promise<void>;
+  /** TEMP (spike): fire a one-off notification a few seconds out, to verify
+   *  delivery on-device without waiting for the daily time. Remove before ship. */
+  sendTestNotification(): Promise<void>;
 }
 
 // One stable id for the daily reminder, so scheduling again replaces it rather
 // than stacking duplicates.
 const DAILY_REMINDER_ID = 1;
+const TEST_NOTIFICATION_ID = 999;
 
 // Web has no reliable scheduled-local-notification primitive, and the whole
 // point of the native spike is to validate reminders on Android — so on web
@@ -30,6 +34,9 @@ const webNotifications: NotificationsProvider = {
     /* no-op on web */
   },
   async cancelDailyReminder() {
+    /* no-op on web */
+  },
+  async sendTestNotification() {
     /* no-op on web */
   },
 };
@@ -64,6 +71,19 @@ const nativeNotifications: NotificationsProvider = {
     const { LocalNotifications } = await import('@capacitor/local-notifications');
     await LocalNotifications.cancel({
       notifications: [{ id: DAILY_REMINDER_ID }],
+    });
+  },
+  async sendTestNotification() {
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: TEST_NOTIFICATION_ID,
+          title: 'A moment to reflect',
+          body: 'This is a test — your daily reminder will look like this.',
+          schedule: { at: new Date(Date.now() + 3000) },
+        },
+      ],
     });
   },
 };
