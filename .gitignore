@@ -30,6 +30,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except production: only public VITE_ vars live here, so the Cloudflare
+# Git build is self-contained. Never put secrets in a VITE_ var or this file.
+!.env.production
 
 # vercel
 .vercel
