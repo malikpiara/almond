@@ -11,6 +11,9 @@ export default defineConfig({
     tsconfigPaths(),
     VitePWA({
       registerType: 'autoUpdate',
+      // We register the SW manually (in main.tsx) so we can skip it inside the
+      // Capacitor WebView — a SW there only reintroduces stale-cache bugs.
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon-180.png'],
       manifest: {
         name: 'Almond',

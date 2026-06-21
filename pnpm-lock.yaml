@@ -147,6 +147,9 @@ importers:
       vite-tsconfig-paths:
         specifier: ^6.1.1
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@20.19.25)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0))
+      workbox-window:
+        specifier: ^7.4.1
+        version: 7.4.1
       wrangler:
         specifier: ^4.103.0
         version: 4.103.0(@cloudflare/workers-types@4.20260620.1)

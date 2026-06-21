@@ -13,6 +13,17 @@ import { Home } from './routes/home';
 import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
 import { LinkDevice } from './routes/link-device';
+import { isNative } from './platform';
+
+// Register the PWA service worker on web only. Inside the Capacitor WebView the
+// app is served natively, so a SW there adds nothing and reintroduces the
+// stale-cache class of bugs. Manual registration (injectRegister:false) is what
+// lets us make it conditional.
+if (!isNative()) {
+  import('virtual:pwa-register').then(({ registerSW }) => {
+    registerSW({ immediate: true });
+  });
+}
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
