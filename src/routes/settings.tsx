@@ -4,6 +4,7 @@ import { isNative } from '@/platform';
 import { isConnected } from '@/lib/drive';
 import { getNotifications } from '@/platform/notifications';
 import { Button } from '@/components/ui/button';
+import { ReflectionStats } from '@/components/reflection-stats';
 import { ReminderControl } from '@/components/reminder-control';
 import { PairLink } from '@/components/pair-link';
 
@@ -26,6 +27,7 @@ export function Settings() {
         </h1>
       </div>
 
+      <ReflectionStats />
       {isNative() && !isConnected() && <PairLink />}
       {isNative() && <ReminderControl />}
 

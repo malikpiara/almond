@@ -10,14 +10,17 @@ import { exportData, importData, selectImportFile } from '@/utils/utils';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useDriveAutoSync } from '@/hooks/use-drive-auto-sync';
 import { useAndroidBack } from '@/hooks/use-android-back';
+import { useDeepLink } from '@/hooks/use-deep-link';
 import { SyncUIContext } from '@/lib/sync-ui';
 
 export function RootLayout() {
   // Pull remote changes on app open / focus / reconnect so other devices don't
   // show stale data (a no-op until Google Drive is connected).
   useDriveAutoSync();
-  // Android back button/gesture: go to Journals from sub-screens, else exit.
+  // Android back button/gesture: go to Journals from sub-screens, else minimize.
   useAndroidBack();
+  // Pairing deep link (App Link): scan the QR → opens the app → applies the key.
+  useDeepLink();
 
   // Sync is app-global (not per-board), so it lives here in the layout.
   const [syncOpen, setSyncOpen] = useState(false);
