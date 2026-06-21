@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon, ArrowLeft, Feather } from 'lucide-react';
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSwipeBack } from '@/hooks/use-swipe-back';
+import { useSendMorph, canMorph } from '@/hooks/use-send-morph';
 import { useOpenSync } from '@/lib/sync-ui';
 import { Home } from '@/routes/home';
 import { store } from '@/lib/store';
@@ -70,6 +72,11 @@ export function Board() {
     () => navigate({ to: '/journals' }),
     isMobile
   );
+  const morph = useSendMorph();
+  // Send-morph plumbing: the composer textarea (source) and the list container
+  // whose first child is the newest entry (target). Mobile only.
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     localStorage.setItem('almond-last-board', boardId); // land-in-writing
@@ -99,19 +106,54 @@ export function Board() {
     setEntries(await store.getEntries(boardId));
   }
 
+  // The plain entrance: a brief `.animate-entry-appear` fade on the new row.
+  // Used on desktop and as the reduced-motion / unsupported fallback for mobile.
+  function flashEntry(id: string) {
+    setJustAddedId(id);
+    window.setTimeout(
+      () => setJustAddedId((curr) => (curr === id ? null : curr)),
+      500
+    );
+  }
+
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const content = data.description;
     try {
       // Save first — instant reward, no waiting on the AI.
       const entry = await store.createEntry(boardId, content);
-      setEntries(await store.getEntries(boardId));
-      setJustAddedId(entry.id); // entrance animation for the new entry
-      window.setTimeout(
-        () => setJustAddedId((id) => (id === entry.id ? null : id)),
-        500
-      );
+      const next = await store.getEntries(boardId);
+
+      // Mobile: morph the typed text from the composer up into its new row
+      // (Telegram's send-message morph). Desktop and reduced-motion keep the
+      // plain fade. Capture the composer rect *before* the form resets.
+      const useMorph =
+        isMobile && canMorph() && !!composerRef.current && !!listRef.current;
+      const sourceRect = useMorph
+        ? composerRef.current!.getBoundingClientRect()
+        : null;
+
+      if (useMorph && sourceRect) {
+        // Insert + clear synchronously so we can measure the landed row and
+        // start the flight in the same frame — no fade flash beforehand.
+        flushSync(() => {
+          setEntries(next);
+          form.reset();
+        });
+        // Newest entry is entries[0] → the list's first DOM child (it renders
+        // at the bottom under column-reverse).
+        const row = listRef.current!.firstElementChild as HTMLElement | null;
+        if (row) {
+          morph(row, sourceRect);
+        } else {
+          flashEntry(entry.id); // measure failed — fall back to the fade
+        }
+      } else {
+        setEntries(next);
+        flashEntry(entry.id);
+        form.reset();
+      }
+
       toast('Entry saved!');
-      form.reset();
 
       // Enrich with people/places in the background; patch the entry when it
       // lands. extractEntities never throws (empty on failure).
@@ -234,6 +276,7 @@ export function Board() {
             the scroll naturally rests there — the chat-app trick, no JS scroll. */}
         <div
           id='entries'
+          ref={listRef}
           className='flex min-h-0 flex-1 flex-col-reverse overflow-y-auto'
         >
           {entries.map((entry, index) => (
@@ -289,6 +332,10 @@ export function Board() {
                 <div className='flex items-end gap-1.5 rounded-3xl border border-gray-200 bg-white py-1.5 pl-4 pr-1.5 focus-within:ring-2 focus-within:ring-gray-300'>
                   <textarea
                     {...field}
+                    ref={(el) => {
+                      field.ref(el);
+                      composerRef.current = el;
+                    }}
                     rows={1}
                     placeholder='Take a moment to reflect…'
                     aria-invalid={fieldState.invalid}
