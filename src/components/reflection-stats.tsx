@@ -41,13 +41,17 @@ export function ReflectionStats() {
     store
       .init()
       .then(() => store.snapshot())
-      .then((data) =>
-        setStats(
-          computeStats(
-            data.entries.filter((e) => !e.isDeleted).map((e) => e.timestamp)
-          )
-        )
-      );
+      .then((data) => {
+        // Exclude tombstoned entries AND entries of deleted boards — deleting a
+        // board only tombstones the board, leaving its entries un-deleted.
+        const liveBoards = new Set(
+          data.boards.filter((b) => !b.isDeleted).map((b) => b.id)
+        );
+        const timestamps = data.entries
+          .filter((e) => !e.isDeleted && liveBoards.has(e.boardId))
+          .map((e) => e.timestamp);
+        setStats(computeStats(timestamps));
+      });
   }, []);
 
   if (!stats) return null;
