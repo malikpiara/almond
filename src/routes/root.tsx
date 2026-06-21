@@ -8,9 +8,14 @@ import { ExportModal } from '@/components/export-modal';
 import { ImportModal } from '@/components/import-modal';
 import { exportData, importData, selectImportFile } from '@/utils/utils';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useDriveAutoSync } from '@/hooks/use-drive-auto-sync';
 import { SyncUIContext } from '@/lib/sync-ui';
 
 export function RootLayout() {
+  // Pull remote changes on app open / focus / reconnect so other devices don't
+  // show stale data (a no-op until Google Drive is connected).
+  useDriveAutoSync();
+
   // Sync is app-global (not per-board), so it lives here in the layout.
   const [syncOpen, setSyncOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);

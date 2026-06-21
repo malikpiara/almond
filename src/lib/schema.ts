@@ -99,7 +99,7 @@ export function migrate(raw: unknown): Envelope {
 
 // --- Merge (last-write-wins, single-user device sync) -----------------------
 
-function hasEntities(e?: Entry['entities']): boolean {
+export function hasEntities(e?: Entry['entities']): boolean {
   return !!e && ((e.people?.length ?? 0) > 0 || (e.places?.length ?? 0) > 0);
 }
 

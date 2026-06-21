@@ -1,7 +1,7 @@
 import type { UserData } from '@/types';
 import { store } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/crypto';
-import { migrate, wrap, merge, ForwardCompatError } from '@/lib/schema';
+import { migrate, wrap, merge, hasEntities, ForwardCompatError } from '@/lib/schema';
 
 /**
  * End-to-end-encrypted sync of the journal to the user's own Google Drive
@@ -41,6 +41,10 @@ export type SyncResult = {
     | 'needs-pairing'
     | 'forward-compat'
     | 'error';
+  // True when the pull merged in remote changes the open UI isn't showing yet
+  // (a new/edited/deleted record from another device). Lets passive syncs
+  // decide whether the screen needs refreshing.
+  changed?: boolean;
 };
 
 export function isConfigured(): boolean {
@@ -231,6 +235,22 @@ async function ensureEmail(token: string): Promise<void> {
 // --- Sync orchestration -----------------------------------------------------
 
 /**
+ * A stable, order-independent fingerprint of a journal's *observable* state.
+ * Records are immutable (create + soft-delete) so the only changes that matter
+ * are: a record appearing, a deletion (tombstone), or entities arriving. Two
+ * journals with the same signature look identical on screen — so comparing
+ * signatures tells us whether a pull changed anything (→ refresh the UI) and
+ * whether our merged view differs from the remote blob (→ worth re-uploading).
+ */
+function signature(d: UserData): string {
+  const boards = d.boards.map((b) => `${b.id}:${b.isDeleted ? 1 : 0}`).sort();
+  const entries = d.entries
+    .map((e) => `${e.id}:${e.isDeleted ? 1 : 0}:${hasEntities(e.entities) ? 1 : 0}`)
+    .sort();
+  return boards.join(',') + '|' + entries.join(',');
+}
+
+/**
  * Pull → merge → push. Correctness comes from the merge (union by id, tombstone
  * wins), so even a lost upload race converges on the next sync. `interactive`
  * controls whether a missing token may prompt the user for consent.
@@ -257,12 +277,20 @@ export async function sync(interactive = false): Promise<SyncResult> {
     }
     const local = await store.snapshot();
     const merged = remote ? merge(local, remote) : local;
+    const mergedSig = signature(merged);
+    // Did the pull bring in anything the open UI isn't showing yet?
+    const changed = remote ? mergedSig !== signature(local) : false;
     await store.replaceData(merged);
-    const out = await encryptData(JSON.stringify(wrap(merged)), passphrase);
-    if (id) await updateFile(token, id, out);
-    else await createFile(token, out);
+    // Only re-upload when our merged view differs from the remote blob, so a
+    // passive open/focus sync doesn't rewrite an already-current file.
+    const needsUpload = id ? mergedSig !== signature(remote!) : true;
+    if (needsUpload) {
+      const out = await encryptData(JSON.stringify(wrap(merged)), passphrase);
+      if (id) await updateFile(token, id, out);
+      else await createFile(token, out);
+    }
     markSynced();
-    return { ok: true };
+    return { ok: true, changed };
   } catch (e) {
     if (e instanceof ForwardCompatError) return { ok: false, reason: 'forward-compat' };
     if (e instanceof Error && e.name === 'OperationError') {
