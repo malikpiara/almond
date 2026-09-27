@@ -231,7 +231,7 @@ These are correctness rules, not style — apply them silently when writing any 
 
 ## 9. Anti-patterns (don't do these)
 
-Captured from real session corrections — see `~/.claude/projects/-Users-malik-Code-mindful/memory/` for the underlying memos.
+Captured from real session corrections — see `~/.claude/projects/-Users-malik-Code-almond/memory/` for the underlying memos.
 
 1. **Don't change colours or tokens the product has already committed to.** If a smaller element seems to need a stronger amber to read, *propose* it as a separate change. Don't silently swap `amber-200` for `amber-300` because you're shrinking something.
 2. **Don't unify mobile and desktop silently.** "Drop cards on mobile" does not mean "drop cards everywhere." Use `sm:` or `useIsMobile()`.
