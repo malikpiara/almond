@@ -7,8 +7,8 @@ import { migrate, wrap, merge, hasEntities, ForwardCompatError } from '@/lib/sch
  * End-to-end-encrypted sync of the journal to the user's own Google Drive
  * (the hidden per-app `appDataFolder`). Drive only ever stores ciphertext —
  * the passphrase never leaves the device. Auth uses Google Identity Services'
- * token model (no refresh token), so we acquire tokens silently while the
- * Google session is active and fall back to interactive consent.
+ * token model (no refresh token): a user action (Connect / Sync now / pairing)
+ * acquires an hour-long token, and background syncs ride it while it lasts.
  */
 
 declare global {
@@ -140,13 +140,13 @@ function ensureClient(): void {
   });
 }
 
-function requestToken(interactive: boolean): Promise<string> {
+function requestToken(): Promise<string> {
   ensureClient();
   return new Promise((resolve, reject) => {
     pending = { resolve, reject };
     const email = localStorage.getItem(EMAIL_KEY);
     tokenClient.requestAccessToken({
-      prompt: interactive ? 'consent' : '',
+      prompt: 'consent',
       ...(email ? { hint: email } : {}),
     });
   });
@@ -154,7 +154,14 @@ function requestToken(interactive: boolean): Promise<string> {
 
 async function getToken(interactive: boolean): Promise<string> {
   if (accessToken && Date.now() < tokenExpiry) return accessToken;
-  return requestToken(interactive);
+  // GIS's token model has no silent refresh: every requestAccessToken() opens
+  // a popup window, even with prompt ''. From a background sync (app open,
+  // focus, after an edit) that's a popup nobody asked for — and where the site
+  // is allowed popups, one opened from the installed Almond window on macOS
+  // crashed all of Chrome (151–153), on every launch. So only a user action
+  // may ask Google for a token; passive syncs skip until the next one.
+  if (!interactive) throw new Error('needs-interaction');
+  return requestToken();
 }
 
 // --- Drive v3 REST (bare fetch, appDataFolder space) ------------------------

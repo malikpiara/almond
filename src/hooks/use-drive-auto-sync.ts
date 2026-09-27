@@ -17,6 +17,10 @@ const PASSIVE_THROTTLE_MS = 10_000;
  * on cold open there's no draft → reload silently; on focus/visibility/online a
  * draft may exist → show a non-destructive "Refresh" toast instead of yanking
  * the page.
+ *
+ * These are passive syncs: they only ride a token a user action already
+ * fetched and never open Google's auth popup (see getToken in drive.ts), so a
+ * cold open is a no-op until the next Sync now.
  */
 export function useDriveAutoSync(): void {
   useEffect(() => {
