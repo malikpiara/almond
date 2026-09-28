@@ -277,8 +277,9 @@ async function ensureEmail(token: string): Promise<void> {
 
 /**
  * A stable, order-independent fingerprint of a journal's *observable* state.
- * Records are immutable (create + soft-delete) so the only changes that matter
- * are: a record appearing, a deletion (tombstone), or entities arriving. Two
+ * Boards and entries are immutable (create + soft-delete), so the only changes
+ * that matter are: a record appearing, a deletion (tombstone), or entities
+ * arriving. Person logs are edited in place, so their updatedAt counts too. Two
  * journals with the same signature look identical on screen — so comparing
  * signatures tells us whether a pull changed anything (→ refresh the UI) and
  * whether our merged view differs from the remote blob (→ worth re-uploading).
@@ -288,7 +289,11 @@ function signature(d: UserData): string {
   const entries = d.entries
     .map((e) => `${e.id}:${e.isDeleted ? 1 : 0}:${hasEntities(e.entities) ? 1 : 0}`)
     .sort();
-  return boards.join(',') + '|' + entries.join(',');
+  // Logs are editable, so updatedAt is part of their fingerprint.
+  const logs = d.personLogs
+    .map((l) => `${l.id}:${l.isDeleted ? 1 : 0}:${l.updatedAt}`)
+    .sort();
+  return boards.join(',') + '|' + entries.join(',') + '|' + logs.join(',');
 }
 
 /**

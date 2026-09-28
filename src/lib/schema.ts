@@ -1,4 +1,4 @@
-import type { UserData, Board, Entry } from '@/types';
+import type { UserData, Board, Entry, PersonLog } from '@/types';
 
 /**
  * The versioned envelope that wraps Almond's journal data everywhere it's
@@ -9,7 +9,7 @@ import type { UserData, Board, Entry } from '@/types';
 
 // Bump only when the *shape* of UserData changes; each bump needs a migration
 // step below. Distinct from APP_VERSION, which is diagnostics-only.
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 // Diagnostics only — never drives migration logic.
 export const APP_VERSION = '0.1.0';
@@ -32,7 +32,7 @@ export class ForwardCompatError extends Error {
   }
 }
 
-const EMPTY: UserData = { boards: [], entries: [] };
+const EMPTY: UserData = { boards: [], entries: [], personLogs: [] };
 
 function isEnvelope(v: unknown): v is Envelope {
   return (
@@ -53,8 +53,10 @@ function isBareUserData(v: unknown): v is UserData {
 }
 
 // Forward migrations keyed by source version → next version's data shape.
-// None yet (v1 is the baseline). Future: `{ 1: (v1) => v2Shape }`.
-const MIGRATIONS: Record<number, (data: UserData) => UserData> = {};
+const MIGRATIONS: Record<number, (data: UserData) => UserData> = {
+  // v2: people logged on the Today screen.
+  1: (data) => ({ ...data, personLogs: [] }),
+};
 
 export function wrap(data: UserData): Envelope {
   return {
@@ -91,8 +93,16 @@ export function migrate(raw: unknown): Envelope {
     };
   }
 
-  // Pre-envelope bare data → treat as the v1 baseline.
-  if (isBareUserData(value)) return wrap(value);
+  // Pre-envelope bare data → treat as the v1 baseline and migrate it up.
+  if (isBareUserData(value)) {
+    return migrate({
+      kind: 'almond-journal',
+      schemaVersion: 1,
+      appVersion: 'pre-envelope',
+      updatedAt: Date.now(),
+      data: value,
+    });
+  }
 
   throw new Error('Unrecognized Almond data.');
 }
@@ -140,9 +150,10 @@ function mergeRecords<T extends { id: string; isDeleted: boolean }>(
 }
 
 /**
- * Merge two journals into one. Correct because records are immutable today
- * (create + soft-delete only). Editable entries will require a v2 bump adding
- * per-record `updatedAt` — keep this signature stable so that change stays here.
+ * Merge two journals into one. Boards and entries are immutable (create +
+ * soft-delete only), so their creation time is enough. Person logs are edited
+ * after creation (balance, notes), so the newer `updatedAt` wins; a deletion
+ * still beats any edit.
  */
 export function merge(a: UserData, b: UserData): UserData {
   return {
@@ -152,6 +163,11 @@ export function merge(a: UserData, b: UserData): UserData {
       b.entries,
       (x: Entry) => x.timestamp,
       combineEntry
+    ),
+    personLogs: mergeRecords(
+      a.personLogs,
+      b.personLogs,
+      (x: PersonLog) => x.updatedAt
     ),
   };
 }

@@ -14,6 +14,23 @@ export function formatEntryDate(timestamp: number): string {
   return isThisYear(date) ? format(date, 'd MMMM') : format(date, 'd MMMM yyyy');
 }
 
+// Person logs belong to a local calendar day, stored as yyyy-MM-dd so it
+// never shifts with the device's timezone.
+export function dayKey(timestamp: number): string {
+  return format(new Date(timestamp), 'yyyy-MM-dd');
+}
+
+export function formatDay(day: string): string {
+  const [y, m, d] = day.split('-').map(Number);
+  return formatEntryDate(new Date(y, m - 1, d).getTime());
+}
+
+// theirShare is how much of the talking the other person did, 0–100.
+export function formatBalance(theirShare: number | null): string {
+  if (theirShare == null) return 'Balance not set';
+  return `You ${100 - theirShare}% · Them ${theirShare}%`;
+}
+
 export function generateShortId() {
   return Math.random().toString(36).substring(2, 15);
   // Result: something like "k3j5h2m9x4a"
@@ -22,6 +39,10 @@ export function generateShortId() {
 export function generateEntryId() {
   return 'entry_' + generateShortId();
   // Result: something like "entry_k3j5h2m9x4a"
+}
+
+export function generatePersonLogId() {
+  return 'log_' + generateShortId();
 }
 
 export function generateBoardId() {

@@ -95,13 +95,22 @@ export function Home() {
         <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
           Your Journals
         </h1>
-        <Link
-          to='/people'
-          viewTransition={isMobile ? { types: ['slide-forward'] } : undefined}
-          className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
-        >
-          People
-        </Link>
+        <div className='flex items-baseline gap-4'>
+          <Link
+            to='/today'
+            viewTransition={isMobile ? { types: ['slide-forward'] } : undefined}
+            className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+          >
+            Today
+          </Link>
+          <Link
+            to='/people'
+            viewTransition={isMobile ? { types: ['slide-forward'] } : undefined}
+            className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+          >
+            People
+          </Link>
+        </div>
       </div>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (

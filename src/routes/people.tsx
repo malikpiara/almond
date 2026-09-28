@@ -56,10 +56,21 @@ export function People() {
                     {person.name}
                   </span>
                   <span className='shrink-0 text-sm text-gray-500'>
-                    {person.entryCount === 1
-                      ? '1 entry'
-                      : `${person.entryCount} entries`}{' '}
-                    · {formatEntryDate(person.lastMentionedAt)}
+                    {[
+                      person.entryCount === 1
+                        ? '1 entry'
+                        : person.entryCount > 1
+                          ? `${person.entryCount} entries`
+                          : null,
+                      person.logCount === 1
+                        ? '1 log'
+                        : person.logCount > 1
+                          ? `${person.logCount} logs`
+                          : null,
+                      formatEntryDate(person.lastSeenAt),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                 </Link>
               </li>
