@@ -13,6 +13,11 @@ import { Home } from './routes/home';
 import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
 import { LinkDevice } from './routes/link-device';
+import { consumeAuthRedirect } from './lib/drive';
+
+// Back from Google's sign-in on /auth#access_token=…: take the token and
+// restore the user's URL before the router ever sees it.
+consumeAuthRedirect();
 
 const rootRoute = createRootRoute({ component: RootLayout });
 

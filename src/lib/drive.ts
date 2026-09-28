@@ -6,18 +6,11 @@ import { migrate, wrap, merge, hasEntities, ForwardCompatError } from '@/lib/sch
 /**
  * End-to-end-encrypted sync of the journal to the user's own Google Drive
  * (the hidden per-app `appDataFolder`). Drive only ever stores ciphertext —
- * the passphrase never leaves the device. Auth uses Google Identity Services'
- * token model (no refresh token): a user action (Connect / Sync now / pairing)
- * acquires an hour-long token, and background syncs ride it while it lasts.
+ * the passphrase never leaves the device. Auth is Google's OAuth token flow by
+ * full-page redirect (no refresh token): a user action (Connect / Sync now /
+ * pairing) acquires an hour-long token, and background syncs ride it while it
+ * lasts.
  */
-
-declare global {
-  interface Window {
-    // GIS is loaded via a <script> in index.html; typed loosely on purpose.
-     
-    google?: any;
-  }
-}
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -26,8 +19,8 @@ const FILE_NAME = 'almond.enc';
 const CONNECTED_KEY = 'almond-drive-connected';
 const PASS_KEY = 'almond-drive-passphrase';
 const LAST_SYNC_KEY = 'almond-drive-last-sync';
-// The connected account's email, used as a token-request `hint` so an
-// already-connected device re-acquires tokens silently (no account chooser)
+// The connected account's email, used as the token request's `login_hint` so
+// an already-connected device re-acquires tokens without the account chooser
 // even when several Google accounts are signed in.
 const EMAIL_KEY = 'almond-drive-email';
 
@@ -68,7 +61,7 @@ export function disconnect(): void {
   localStorage.removeItem(CONNECTED_KEY);
   localStorage.removeItem(PASS_KEY);
   localStorage.removeItem(EMAIL_KEY);
-  accessToken = null;
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 function markConnected(passphrase: string): void {
@@ -105,63 +98,104 @@ function markSynced(): void {
   localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
 }
 
-// --- Google Identity Services token (in-memory only) ------------------------
+// --- Google OAuth token (full-page redirect, no popup) ----------------------
+//
+// Google Identity Services' token client only ever works through a popup
+// window, and on macOS Chrome (151–154) a popup opened from the installed
+// Almond window crashes the whole browser: with or without a user gesture. So
+// we run the same OAuth token flow by navigating the app's own window to
+// Google and back. It needs `${origin}/auth` registered as an authorized
+// redirect URI on the OAuth client.
 
- 
-let tokenClient: any = null;
-let accessToken: string | null = null;
-let tokenExpiry = 0;
-let pending: { resolve: (t: string) => void; reject: (e: Error) => void } | null =
-  null;
+const TOKEN_KEY = 'almond-drive-token';
+const REDIRECT_KEY = 'almond-drive-redirect';
+const REDIRECT_PATH = '/auth';
 
-function ensureClient(): void {
-  if (tokenClient) return;
-  const oauth2 = window.google?.accounts?.oauth2;
-  if (!oauth2) throw new Error('gis-unavailable');
-  tokenClient = oauth2.initTokenClient({
-    client_id: CLIENT_ID,
+/** What the user was doing when we left for Google, resumed on return. */
+export type AuthIntent = 'connect' | 'sync';
+export type AuthReturn = { intent: AuthIntent; ok: boolean };
+
+let authReturn: AuthReturn | null = null;
+
+// sessionStorage, not memory: the token has to survive our own reloads (the
+// round trip to Google, the refresh after a sync). It's scoped to this window
+// and gone when it closes.
+function readToken(): string | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(TOKEN_KEY) ?? 'null');
+    return saved && Date.now() < saved.expiry ? saved.token : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveToken(token: string, expiresInSec: number): void {
+  const expiry = Date.now() + expiresInSec * 1000 - 60_000;
+  sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiry }));
+}
+
+function redirectToGoogle(intent: AuthIntent): Promise<never> {
+  const state = generateKey(); // CSRF guard: the token must answer our request
+  const returnTo = location.pathname + location.search;
+  sessionStorage.setItem(REDIRECT_KEY, JSON.stringify({ state, intent, returnTo }));
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID!,
+    redirect_uri: location.origin + REDIRECT_PATH,
+    response_type: 'token',
     scope: SCOPE,
-     
-    callback: (resp: any) => {
-      if (resp.error) {
-        pending?.reject(new Error(resp.error));
-      } else {
-        accessToken = resp.access_token;
-        tokenExpiry = Date.now() + Number(resp.expires_in ?? 3600) * 1000 - 60_000;
-        pending?.resolve(accessToken!);
-      }
-      pending = null;
-    },
-     
-    error_callback: (err: any) => {
-      pending?.reject(new Error(err?.type ?? 'oauth_error'));
-      pending = null;
-    },
+    include_granted_scopes: 'true',
+    state,
   });
+  const email = localStorage.getItem(EMAIL_KEY);
+  if (email) params.set('login_hint', email);
+  location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  return new Promise(() => {}); // never settles: the page is navigating away
 }
 
-function requestToken(): Promise<string> {
-  ensureClient();
-  return new Promise((resolve, reject) => {
-    pending = { resolve, reject };
-    const email = localStorage.getItem(EMAIL_KEY);
-    tokenClient.requestAccessToken({
-      prompt: 'consent',
-      ...(email ? { hint: email } : {}),
-    });
-  });
+/**
+ * Run once at startup, before the router reads the URL. If Google just sent us
+ * back to /auth, keep the token, put the URL back where the user was, and
+ * remember what they were doing (read later via takeAuthReturn).
+ */
+export function consumeAuthRedirect(): void {
+  if (location.pathname !== REDIRECT_PATH) return;
+  const params = new URLSearchParams(location.hash.slice(1));
+  let saved: { state: string; intent: AuthIntent; returnTo: string } | null = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(REDIRECT_KEY) ?? 'null');
+  } catch {
+    // corrupted: treat as unsolicited
+  }
+  sessionStorage.removeItem(REDIRECT_KEY);
+  history.replaceState(null, '', saved?.returnTo ?? '/');
+  if (!saved || params.get('state') !== saved.state) return;
+  const token = params.get('access_token');
+  let ok = false;
+  if (token) {
+    try {
+      saveToken(token, Number(params.get('expires_in') ?? 3600));
+      ok = true; // ok ⇒ a stored token, so resuming can't bounce back to Google
+    } catch {
+      // storage unavailable: report it as a failed sign-in
+    }
+  }
+  authReturn = { intent: saved.intent, ok };
 }
 
-async function getToken(interactive: boolean): Promise<string> {
-  if (accessToken && Date.now() < tokenExpiry) return accessToken;
-  // GIS's token model has no silent refresh: every requestAccessToken() opens
-  // a popup window, even with prompt ''. From a background sync (app open,
-  // focus, after an edit) that's a popup nobody asked for — and where the site
-  // is allowed popups, one opened from the installed Almond window on macOS
-  // crashed all of Chrome (151–153), on every launch. So only a user action
-  // may ask Google for a token; passive syncs skip until the next one.
-  if (!interactive) throw new Error('needs-interaction');
-  return requestToken();
+/** The result of a redirect that completed on this page load, if any. */
+export function takeAuthReturn(): AuthReturn | null {
+  const r = authReturn;
+  authReturn = null;
+  return r;
+}
+
+/** A valid token, or a redirect to Google for one. Passive syncs pass no intent:
+ *  leaving the page is only ever a response to the user doing something. */
+async function getToken(intent: AuthIntent | null): Promise<string> {
+  const token = readToken();
+  if (token) return token;
+  if (!intent) throw new Error('needs-interaction');
+  return redirectToGoogle(intent);
 }
 
 // --- Drive v3 REST (bare fetch, appDataFolder space) ------------------------
@@ -269,7 +303,7 @@ export async function sync(interactive = false): Promise<SyncResult> {
 
   let token: string;
   try {
-    token = await getToken(interactive);
+    token = await getToken(interactive ? 'sync' : null);
   } catch {
     return { ok: false, reason: 'auth' };
   }
@@ -318,7 +352,7 @@ export async function connect(): Promise<SyncResult> {
 
   let token: string;
   try {
-    token = await getToken(true);
+    token = await getToken('connect');
   } catch {
     return { ok: false, reason: 'auth' };
   }

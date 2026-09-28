@@ -12,12 +12,13 @@ import { useDriveAutoSync } from '@/hooks/use-drive-auto-sync';
 import { SyncUIContext } from '@/lib/sync-ui';
 
 export function RootLayout() {
-  // Pull remote changes on app open / focus / reconnect so other devices don't
-  // show stale data (a no-op until Google Drive is connected).
-  useDriveAutoSync();
-
   // Sync is app-global (not per-board), so it lives here in the layout.
   const [syncOpen, setSyncOpen] = useState(false);
+
+  // Pull remote changes on app open / focus / reconnect so other devices don't
+  // show stale data (a no-op until Google Drive is connected). Also finishes a
+  // Connect that came back from Google needing pairing, by reopening Sync.
+  useDriveAutoSync(() => setSyncOpen(true));
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);

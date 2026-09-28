@@ -15,6 +15,7 @@ import {
   getLinkUrl,
   type SyncResult,
 } from '@/lib/drive';
+import { SYNC_FAILURE } from '@/lib/sync-ui';
 
 interface SyncModalProps {
   isOpen: boolean;
@@ -23,19 +24,6 @@ interface SyncModalProps {
   onExport: () => void;
   onImport: () => void;
 }
-
-const REASON: Record<NonNullable<SyncResult['reason']>, string> = {
-  'not-configured': 'Sync isn’t set up in this build yet.',
-  'no-passphrase': 'No sync key on this device yet.',
-  auth: 'Google sign-in was cancelled or failed.',
-  'bad-passphrase':
-    'This device’s key doesn’t match the journal in your Drive.',
-  'needs-pairing':
-    'This Google account already has an Almond journal — link this device instead (below).',
-  'forward-compat':
-    'Your Drive copy was written by a newer Almond — please update Almond.',
-  error: 'Sync failed. Check your connection and try again.',
-};
 
 export function SyncModal({
   isOpen,
@@ -71,7 +59,7 @@ export function SyncModal({
       await onAfterSync();
     } else {
       if (result.reason === 'needs-pairing') setNeedsPairing(true);
-      toast.error(REASON[result.reason ?? 'error']);
+      toast.error(SYNC_FAILURE[result.reason ?? 'error']);
     }
   };
 

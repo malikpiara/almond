@@ -1,10 +1,42 @@
-import { useEffect } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import { toast } from 'sonner';
-import { isConnected, sync } from '@/lib/drive';
+import {
+  connect,
+  isConnected,
+  sync,
+  takeAuthReturn,
+  type AuthReturn,
+} from '@/lib/drive';
+import { SYNC_FAILURE } from '@/lib/sync-ui';
 
 // Passive triggers (focus/visibility/online) can fire in bursts as you flick
 // between apps — throttle so we sync at most once per window from them.
 const PASSIVE_THROTTLE_MS = 10_000;
+
+// Module scope, not a ref: StrictMode runs effects twice in dev, and a page
+// load that came back from Google must skip the cold-open pull both times.
+let resumedThisLoad = false;
+
+/** Finish what the user started (Connect / Sync now / pairing) before the app
+ *  left for Google's sign-in page. */
+async function finishAuthRedirect(
+  { intent, ok }: AuthReturn,
+  onNeedsPairing?: () => void
+): Promise<void> {
+  if (!ok) {
+    toast.error(SYNC_FAILURE.auth);
+    return;
+  }
+  // ok means a token is stored, so neither call can redirect again.
+  const result = intent === 'connect' ? await connect() : await sync(false);
+  if (!result.ok) {
+    if (result.reason === 'needs-pairing') onNeedsPairing?.();
+    toast.error(SYNC_FAILURE[result.reason ?? 'error']);
+    return;
+  }
+  if (result.changed) window.location.reload();
+  else toast.success(intent === 'connect' ? 'Connected and synced' : 'Synced');
+}
 
 /**
  * Keeps the open app current with changes made on other devices. Today's sync
@@ -19,10 +51,14 @@ const PASSIVE_THROTTLE_MS = 10_000;
  * the page.
  *
  * These are passive syncs: they only ride a token a user action already
- * fetched and never open Google's auth popup (see getToken in drive.ts), so a
- * cold open is a no-op until the next Sync now.
+ * fetched and never send the app to Google's sign-in (see getToken in
+ * drive.ts), so a cold open is a no-op until the next Sync now. The one
+ * exception is returning *from* that sign-in: then we finish the action the
+ * user started instead.
  */
-export function useDriveAutoSync(): void {
+export function useDriveAutoSync(onNeedsPairing?: () => void): void {
+  const needsPairing = useEffectEvent(() => onNeedsPairing?.());
+
   useEffect(() => {
     let lastPassive = 0;
     let inFlight = false;
@@ -61,8 +97,14 @@ export function useDriveAutoSync(): void {
       if (document.visibilityState === 'visible') passive();
     };
 
-    // Initial pull on app open — safe to reload, no draft exists yet.
-    void runSync('reload');
+    const authReturn = takeAuthReturn();
+    if (authReturn) {
+      resumedThisLoad = true;
+      void finishAuthRedirect(authReturn, needsPairing);
+    } else if (!resumedThisLoad) {
+      // Initial pull on app open — safe to reload, no draft exists yet.
+      void runSync('reload');
+    }
 
     window.addEventListener('focus', passive);
     document.addEventListener('visibilitychange', onVisibility);
