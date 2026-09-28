@@ -68,10 +68,14 @@ export function Board() {
   const [drawerReady, setDrawerReady] = useState(false);
   const isMobile = useIsMobile();
   const openSync = useOpenSync();
-  const swipeBack = useSwipeBack(
-    () => navigate({ to: '/journals' }),
-    isMobile
-  );
+  const {
+    ref: swipeRef,
+    peekRef: swipePeekRef,
+    peeking: swipePeeking,
+    onTouchStart: onSwipeStart,
+    onTouchMove: onSwipeMove,
+    onTouchEnd: onSwipeEnd,
+  } = useSwipeBack(() => navigate({ to: '/journals' }), isMobile);
   const morph = useSendMorph();
   // Send-morph plumbing: the composer textarea (source) and the list container
   // whose first child is the newest entry (target). Mobile only.
@@ -98,7 +102,8 @@ export function Board() {
   }, [boardId]);
 
   useEffect(() => {
-    setDrawerReady(true);
+    const frame = requestAnimationFrame(() => setDrawerReady(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   async function deleteEntry(id: string) {
@@ -240,9 +245,9 @@ export function Board() {
       <>
         {/* Destination peek: the Journals screen parallaxes in behind the board
             during a swipe-back, then the real route takes over on commit. */}
-        {swipeBack.peeking && (
+        {swipePeeking && (
         <div
-          ref={swipeBack.peekRef}
+          ref={swipePeekRef}
           aria-hidden
           style={{ transform: 'translateX(-30%)' }}
           className='fixed inset-0 z-0 overflow-hidden bg-[#FAF9F5]'
@@ -251,10 +256,10 @@ export function Board() {
         </div>
       )}
       <div
-        ref={swipeBack.ref}
-        onTouchStart={swipeBack.onTouchStart}
-        onTouchMove={swipeBack.onTouchMove}
-        onTouchEnd={swipeBack.onTouchEnd}
+        ref={swipeRef}
+        onTouchStart={onSwipeStart}
+        onTouchMove={onSwipeMove}
+        onTouchEnd={onSwipeEnd}
         className='fixed inset-0 z-10 flex flex-col bg-[#FAF9F5] [touch-action:pan-y]'
       >
         <div className='shrink-0 flex items-center gap-1 bg-[#FAF9F5] px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]'>
@@ -311,7 +316,7 @@ export function Board() {
         </div>
 
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={(e) => form.handleSubmit(onSubmit)(e)}
           className='shrink-0 bg-[#FAF9F5] px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
         >
           <Controller
@@ -442,7 +447,7 @@ export function Board() {
       <form
         id='form-rhf-demo'
         className='space-y-4 w-full'
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={(e) => form.handleSubmit(onSubmit)(e)}
       >
         <FieldGroup>
           <Controller
