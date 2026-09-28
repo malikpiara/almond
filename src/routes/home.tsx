@@ -91,9 +91,18 @@ export function Home() {
 
   return (
     <div className='max-w-4xl mx-auto flex flex-col min-h-screen gap-6 px-6 sm:px-8 pb-28'>
-      <h1 className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-3 bg-[#FAF9F5]/80 backdrop-blur-sm scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
-        Your Journals
-      </h1>
+      <div className='sticky top-0 z-10 -mx-6 sm:-mx-8 px-6 sm:px-8 py-3 bg-[#FAF9F5]/80 backdrop-blur-sm flex items-baseline justify-between gap-4'>
+        <h1 className='scroll-m-20 text-2xl font-medium tracking-tight text-balance text-gray-800'>
+          Your Journals
+        </h1>
+        <Link
+          to='/people'
+          viewTransition={isMobile ? { types: ['slide-forward'] } : undefined}
+          className='text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+        >
+          People
+        </Link>
+      </div>
       <section id='boards' className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
         {boards.map((board) => (
           <Link

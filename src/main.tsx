@@ -13,6 +13,7 @@ import { Home } from './routes/home';
 import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
 import { LinkDevice } from './routes/link-device';
+import { People } from './routes/people';
 import { consumeAuthRedirect } from './lib/drive';
 
 // Back from Google's sign-in on /auth#access_token=…: take the token and
@@ -39,6 +40,12 @@ const boardRoute = createRoute({
   component: Board,
 });
 
+const peopleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/people',
+  component: People,
+});
+
 const linkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/link',
@@ -49,6 +56,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   journalsRoute,
   boardRoute,
+  peopleRoute,
   linkRoute,
 ]);
 

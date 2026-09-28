@@ -1,4 +1,4 @@
-import type { UserData, Board, Entry } from '@/types';
+import type { UserData, Board, Entry, PersonSummary } from '@/types';
 import { generateBoardId, generateEntryId } from '@/utils/utils';
 import { migrate, wrap } from '@/lib/schema';
 
@@ -84,6 +84,36 @@ export const store = {
     return readRaw()
       .entries.filter((e) => e.boardId === boardId && !e.isDeleted)
       .sort((a, b) => b.timestamp - a.timestamp);
+  },
+
+  /**
+   * Every person mentioned in a live entry, most recently mentioned first.
+   * Names are the raw extracted strings (no merging yet), counted once per
+   * entry. Entries of deleted boards are skipped: board tombstones don't
+   * cascade to their entries.
+   */
+  async getPeople(): Promise<PersonSummary[]> {
+    const data = readRaw();
+    const liveBoards = new Set(
+      data.boards.filter((b) => !b.isDeleted).map((b) => b.id)
+    );
+    const byName = new Map<string, PersonSummary>();
+    for (const entry of data.entries) {
+      if (entry.isDeleted || !liveBoards.has(entry.boardId)) continue;
+      for (const name of new Set(entry.entities?.people ?? [])) {
+        if (!name.trim()) continue;
+        const person = byName.get(name);
+        if (person) {
+          person.entryCount += 1;
+          person.lastMentionedAt = Math.max(person.lastMentionedAt, entry.timestamp);
+        } else {
+          byName.set(name, { name, entryCount: 1, lastMentionedAt: entry.timestamp });
+        }
+      }
+    }
+    return [...byName.values()].sort(
+      (a, b) => b.lastMentionedAt - a.lastMentionedAt || a.name.localeCompare(b.name)
+    );
   },
 
   async createBoard(prompt: string): Promise<Board> {

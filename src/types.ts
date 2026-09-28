@@ -10,6 +10,15 @@ export type Board = {
   isDeleted: boolean;
 };
 
+/** A name as extracted from entries, aggregated across the journal. Not yet a
+ *  stable identity: "Ana" and "Ana Silva" are two summaries until people can
+ *  be merged. */
+export type PersonSummary = {
+  name: string;
+  entryCount: number;
+  lastMentionedAt: number;
+};
+
 export type Entry = {
   id: string;
   boardId: string;
