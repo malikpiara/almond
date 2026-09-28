@@ -116,6 +116,24 @@ export const store = {
     );
   },
 
+  /** Live entries mentioning this exact extracted name, newest first, each
+   *  with the board it belongs to. */
+  async getPersonEntries(name: string): Promise<{ entry: Entry; board: Board }[]> {
+    const data = readRaw();
+    const liveBoards = new Map(
+      data.boards.filter((b) => !b.isDeleted).map((b) => [b.id, b])
+    );
+    return data.entries
+      .filter(
+        (e) =>
+          !e.isDeleted &&
+          liveBoards.has(e.boardId) &&
+          (e.entities?.people ?? []).includes(name)
+      )
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map((entry) => ({ entry, board: liveBoards.get(entry.boardId)! }));
+  },
+
   async createBoard(prompt: string): Promise<Board> {
     const data = readRaw();
     const board: Board = {

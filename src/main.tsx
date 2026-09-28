@@ -14,6 +14,7 @@ import { Board } from './routes/board';
 import { IndexRedirect } from './routes/index-redirect';
 import { LinkDevice } from './routes/link-device';
 import { People } from './routes/people';
+import { Person } from './routes/person';
 import { consumeAuthRedirect } from './lib/drive';
 
 // Back from Google's sign-in on /auth#access_token=…: take the token and
@@ -46,6 +47,12 @@ const peopleRoute = createRoute({
   component: People,
 });
 
+const personRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/people/$name',
+  component: Person,
+});
+
 const linkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/link',
@@ -57,6 +64,7 @@ const routeTree = rootRoute.addChildren([
   journalsRoute,
   boardRoute,
   peopleRoute,
+  personRoute,
   linkRoute,
 ]);
 

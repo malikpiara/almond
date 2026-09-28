@@ -370,12 +370,15 @@ export function Board() {
                   <>
                     <div className='px-2 py-1.5 text-sm font-medium'>People</div>
                     {optionsEntry.entities.people.map((person, index) => (
-                      <div
+                      <Link
                         key={index}
-                        className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm'
+                        to='/people/$name'
+                        params={{ name: person }}
+                        onClick={() => setOptionsOpen(false)}
+                        className='relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent'
                       >
                         {person}
-                      </div>
+                      </Link>
                     ))}
                   </>
                 ) : null}
@@ -511,8 +514,10 @@ export function Board() {
                       <>
                         <DropdownMenuLabel>People</DropdownMenuLabel>
                         {entry.entities.people.map((person, index) => (
-                          <DropdownMenuItem key={index}>
-                            {person}
+                          <DropdownMenuItem key={index} asChild className='cursor-pointer'>
+                            <Link to='/people/$name' params={{ name: person }}>
+                              {person}
+                            </Link>
                           </DropdownMenuItem>
                         ))}
                       </>

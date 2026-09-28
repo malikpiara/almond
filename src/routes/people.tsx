@@ -46,19 +46,22 @@ export function People() {
           </p>
           <ul className='-mx-4 sm:mx-0 divide-y divide-gray-200'>
             {people.map((person) => (
-              <li
-                key={person.name}
-                className='flex items-baseline gap-4 px-4 sm:px-0 py-4'
-              >
-                <span className='min-w-0 flex-1 truncate text-gray-800'>
-                  {person.name}
-                </span>
-                <span className='shrink-0 text-sm text-gray-500'>
-                  {person.entryCount === 1
-                    ? '1 entry'
-                    : `${person.entryCount} entries`}{' '}
-                  · {formatEntryDate(person.lastMentionedAt)}
-                </span>
+              <li key={person.name}>
+                <Link
+                  to='/people/$name'
+                  params={{ name: person.name }}
+                  className='flex items-baseline gap-4 px-4 sm:px-0 py-4 cursor-pointer'
+                >
+                  <span className='min-w-0 flex-1 truncate text-gray-800'>
+                    {person.name}
+                  </span>
+                  <span className='shrink-0 text-sm text-gray-500'>
+                    {person.entryCount === 1
+                      ? '1 entry'
+                      : `${person.entryCount} entries`}{' '}
+                    · {formatEntryDate(person.lastMentionedAt)}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
