@@ -156,7 +156,7 @@ export function Log() {
               value={notes}
               onChange={(e) => changeNotes(e.target.value)}
               placeholder='What do you want to remember, ask or follow up on?'
-              className='min-h-32 bg-white leading-relaxed'
+              className='min-h-32 bg-white leading-relaxed sm:text-lg md:text-lg'
             />
           </section>
 
