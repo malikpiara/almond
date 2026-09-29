@@ -4,8 +4,9 @@ import { ArrowLeft } from 'lucide-react';
 import { store } from '@/lib/store';
 import type { PersonLog } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { dayKey, formatBalance, formatDay } from '@/utils/utils';
+import { PersonPicker } from '@/components/person-picker';
+import { BalanceGlyph } from '@/components/balance';
+import { dayKey, formatDay } from '@/utils/utils';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export function Today() {
@@ -14,8 +15,8 @@ export function Today() {
   const [logs, setLogs] = useState<PersonLog[] | null>(null);
   const [known, setKnown] = useState<string[]>([]);
   const [mentioned, setMentioned] = useState<string[]>([]);
-  const [name, setName] = useState('');
   const [version, setVersion] = useState(0);
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -40,14 +41,20 @@ export function Today() {
   async function add(person: string) {
     const trimmed = person.trim();
     if (!trimmed) return;
-    await store.logPerson(trimmed, today);
-    setName('');
+    const log = await store.logPerson(trimmed, today);
     setVersion((v) => v + 1);
+    // The new row plays the journal's new-entry entrance, so the eye catches
+    // where the person landed.
+    setJustAddedId(log.id);
+    window.setTimeout(
+      () => setJustAddedId((curr) => (curr === log.id ? null : curr)),
+      500
+    );
   }
 
-  const todays = (logs ?? [])
-    .filter((l) => l.day === today)
-    .sort((a, b) => a.createdAt - b.createdAt);
+  // Newest first, like the earlier days below: whoever you just added lands
+  // right under the field you added them from.
+  const todays = (logs ?? []).filter((l) => l.day === today);
   const suggestions = mentioned.filter(
     (n) => !todays.some((l) => l.person === n)
   );
@@ -75,31 +82,12 @@ export function Today() {
         </h1>
       </div>
 
-      <form
-        className='flex gap-2'
-        onSubmit={(e) => {
-          e.preventDefault();
-          void add(name);
-        }}
-      >
-        <Input
-          list='known-people'
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder='Who did you spend time with?'
-          aria-label='Add a person'
-          autoComplete='off'
-          className='bg-white'
-        />
-        <Button type='submit' variant='outline' className='cursor-pointer'>
-          Add
-        </Button>
-      </form>
-      <datalist id='known-people'>
-        {known.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
+      <PersonPicker
+        known={known}
+        exclude={todays.map((l) => l.person)}
+        onPick={(person) => void add(person)}
+        placeholder='Who’s in your day?'
+      />
 
       {suggestions.length > 0 && (
         <div className='flex flex-wrap items-center gap-2'>
@@ -119,9 +107,11 @@ export function Today() {
       )}
 
       {logs && todays.length === 0 && (
-        <p className='text-sm text-gray-500'>No one logged today yet.</p>
+        <p className='text-sm text-gray-500'>
+          No one yet. Add people before you see them, or after.
+        </p>
       )}
-      {todays.length > 0 && <LogList logs={todays} />}
+      {todays.length > 0 && <LogList logs={todays} justAddedId={justAddedId} />}
 
       {earlierDays.map(([day, dayLogs]) => (
         <section key={day} className='flex flex-col gap-1 pt-4'>
@@ -133,22 +123,29 @@ export function Today() {
   );
 }
 
-function LogList({ logs }: { logs: PersonLog[] }) {
+function LogList({
+  logs,
+  justAddedId,
+}: {
+  logs: PersonLog[];
+  justAddedId?: string | null;
+}) {
   return (
     <ul className='-mx-4 sm:mx-0 divide-y divide-gray-200'>
       {logs.map((log) => (
-        <li key={log.id}>
+        <li
+          key={log.id}
+          className={log.id === justAddedId ? 'animate-entry-appear' : undefined}
+        >
           <Link
             to='/log/$id'
             params={{ id: log.id }}
-            className='flex items-baseline gap-4 px-4 sm:px-0 py-4 cursor-pointer'
+            className='flex items-center gap-4 px-4 sm:px-0 py-4 cursor-pointer'
           >
             <span className='min-w-0 flex-1 truncate text-gray-800'>
               {log.person}
             </span>
-            <span className='shrink-0 text-sm text-gray-500'>
-              {formatBalance(log.theirShare)}
-            </span>
+            <BalanceGlyph value={log.theirShare} name={log.person} />
           </Link>
         </li>
       ))}

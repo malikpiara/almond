@@ -5,7 +5,8 @@ import { store } from '@/lib/store';
 import type { PersonLog } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { formatBalance, formatDay } from '@/utils/utils';
+import { describeBalance, formatDay } from '@/utils/utils';
+import { BalanceSlider } from '@/components/balance';
 import { cn } from '@/lib/utils';
 
 export function Log() {
@@ -113,59 +114,48 @@ export function Log() {
             </Link>
           </p>
 
-          <section className='flex flex-col gap-2'>
-            <div className='flex items-baseline justify-between gap-4'>
-              <label htmlFor='balance' className='text-sm font-medium text-gray-800'>
-                Who talked more?
-              </label>
-              <span className='text-sm text-gray-500'>
-                {formatBalance(theirShare)}
-              </span>
+          <section className='flex flex-col gap-3'>
+            <div className='flex flex-col gap-1'>
+              <span className='text-sm text-gray-500'>Who talked more?</span>
+              <div className='flex items-baseline justify-between gap-4'>
+                <p
+                  aria-live='polite'
+                  className={cn(
+                    'text-base',
+                    theirShare === null
+                      ? 'text-gray-500'
+                      : 'font-medium text-gray-800'
+                  )}
+                >
+                  {describeBalance(theirShare, log.person)}
+                </p>
+                {theirShare !== null && (
+                  <button
+                    type='button'
+                    onClick={() => changeShare(null)}
+                    className='shrink-0 text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              id='balance'
-              type='range'
-              min={0}
-              max={100}
-              step={1}
-              value={theirShare ?? 50}
-              onChange={(e) => changeShare(Number(e.target.value))}
-              // Tapping the untouched dial at its centre fires no change, so
-              // a click on an unset dial records "balanced".
-              onClick={() => {
-                if (theirShare === null) changeShare(50);
-              }}
-              aria-valuetext={formatBalance(theirShare)}
-              className={cn(
-                'w-full cursor-pointer accent-gray-700',
-                theirShare === null && 'opacity-40'
-              )}
+            <BalanceSlider
+              value={theirShare}
+              onChange={changeShare}
+              name={log.person}
             />
-            <div className='flex justify-between text-xs text-gray-500'>
-              <span>Mostly me</span>
-              <span>Balanced</span>
-              <span>Mostly them</span>
-            </div>
-            {theirShare !== null && (
-              <button
-                type='button'
-                onClick={() => changeShare(null)}
-                className='self-start text-sm text-gray-500 hover:text-gray-800 cursor-pointer'
-              >
-                Clear
-              </button>
-            )}
           </section>
 
           <section className='flex flex-col gap-2'>
-            <label htmlFor='notes' className='text-sm font-medium text-gray-800'>
+            <label htmlFor='notes' className='text-sm text-gray-500'>
               Notes
             </label>
             <Textarea
               id='notes'
               value={notes}
               onChange={(e) => changeNotes(e.target.value)}
-              placeholder='What did you talk about? Anything to remember for next time?'
+              placeholder='What do you want to remember, ask or follow up on?'
               className='min-h-32 bg-white leading-relaxed'
             />
           </section>

@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams, useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react';
 import { store } from '@/lib/store';
 import type { Board, Entry, PersonLog } from '@/types';
-import { formatBalance, formatDay, formatEntryDate } from '@/utils/utils';
+import { formatDay, formatEntryDate } from '@/utils/utils';
+import { BalanceGlyph } from '@/components/balance';
 
 export function Person() {
   const { name } = useParams({ from: '/people/$name' });
@@ -67,11 +68,9 @@ export function Person() {
                   params={{ id: log.id }}
                   className='flex flex-col gap-1 px-4 sm:px-0 py-4 cursor-pointer'
                 >
-                  <span className='flex items-baseline justify-between gap-4'>
+                  <span className='flex items-center justify-between gap-4'>
                     <span className='text-gray-800'>{formatDay(log.day)}</span>
-                    <span className='shrink-0 text-sm text-gray-500'>
-                      {formatBalance(log.theirShare)}
-                    </span>
+                    <BalanceGlyph value={log.theirShare} name={log.person} />
                   </span>
                   {log.notes.trim() && (
                     <span className='truncate text-sm text-gray-500'>

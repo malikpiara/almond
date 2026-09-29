@@ -25,10 +25,15 @@ export function formatDay(day: string): string {
   return formatEntryDate(new Date(y, m - 1, d).getTime());
 }
 
-// theirShare is how much of the talking the other person did, 0–100.
-export function formatBalance(theirShare: number | null): string {
-  if (theirShare == null) return 'Balance not set';
-  return `You ${100 - theirShare}% · Them ${theirShare}%`;
+// theirShare is how much of the talking the other person did, 0–100. It's a
+// feeling, not a measurement, so it's only ever shown in words.
+export function describeBalance(theirShare: number | null, name: string): string {
+  if (theirShare == null) return 'Slide toward whoever talked more';
+  if (theirShare <= 15) return 'You did most of the talking';
+  if (theirShare < 42) return 'You talked a bit more';
+  if (theirShare <= 58) return 'About even';
+  if (theirShare < 85) return `${name} talked a bit more`;
+  return `${name} did most of the talking`;
 }
 
 export function generateShortId() {
