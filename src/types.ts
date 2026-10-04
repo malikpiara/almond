@@ -39,7 +39,8 @@ export type Entry = {
   id: string;
   boardId: string;
   content: string;
-  timestamp: number;
+  timestamp: number; // when it happened (the day it's filed under), editable
+  updatedAt?: number; // last edit; absent on entries written before dates were editable
   isDeleted: boolean;
   entities?: {
     people: string[];

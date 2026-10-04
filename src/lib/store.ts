@@ -1,6 +1,7 @@
 import type { UserData, Board, Entry, PersonLog, PersonSummary } from '@/types';
 import {
   dayKey,
+  timestampForDay,
   generateBoardId,
   generateEntryId,
   generatePersonLogId,
@@ -216,6 +217,47 @@ export const store = {
     triggerSync();
   },
 
+  /** Move a log to another day. There's one log per person per day, so if
+   *  they're already logged on the target day the two are merged into that
+   *  one (its balance wins unless unset; notes are joined) and this log is
+   *  tombstoned. Returns the log that now holds the data. */
+  async movePersonLog(id: string, day: string): Promise<PersonLog> {
+    const data = readRaw();
+    const log = data.personLogs.find((l) => l.id === id && !l.isDeleted);
+    if (!log) throw new Error('Log not found');
+    if (log.day === day) return log;
+    const now = Date.now();
+    const target = data.personLogs.find(
+      (l) => !l.isDeleted && l.person === log.person && l.day === day
+    );
+    let result: PersonLog;
+    let personLogs: PersonLog[];
+    if (target) {
+      const notes = [target.notes.trim(), log.notes.trim()]
+        .filter(Boolean)
+        .join('\n\n');
+      result = {
+        ...target,
+        theirShare: target.theirShare ?? log.theirShare,
+        notes,
+        updatedAt: now,
+      };
+      personLogs = data.personLogs.map((l) =>
+        l.id === target.id
+          ? result
+          : l.id === id
+            ? { ...l, isDeleted: true, updatedAt: now }
+            : l
+      );
+    } else {
+      result = { ...log, day, updatedAt: now };
+      personLogs = data.personLogs.map((l) => (l.id === id ? result : l));
+    }
+    writeRaw({ ...data, personLogs });
+    triggerSync();
+    return result;
+  },
+
   async deletePersonLog(id: string): Promise<void> {
     const data = readRaw();
     writeRaw({
@@ -240,17 +282,20 @@ export const store = {
     return board;
   },
 
+  /** `day` (yyyy-MM-dd) files the entry under a day other than the one it's
+   *  written on, for the past-midnight "this is really yesterday's" case. */
   async createEntry(
     boardId: string,
     content: string,
-    entities?: Entry['entities']
+    entities?: Entry['entities'],
+    day?: string
   ): Promise<Entry> {
     const data = readRaw();
     const entry: Entry = {
       id: generateEntryId(),
       boardId,
       content,
-      timestamp: Date.now(),
+      timestamp: day ? timestampForDay(day) : Date.now(),
       isDeleted: false,
       entities,
     };
@@ -265,6 +310,21 @@ export const store = {
     writeRaw({
       ...data,
       entries: data.entries.map((e) => (e.id === id ? { ...e, entities } : e)),
+    });
+    triggerSync();
+  },
+
+  /** Move an entry to another day. `updatedAt` is what sync merges on, so a
+   *  move backwards in time still wins over the unmoved copy elsewhere. */
+  async setEntryDay(id: string, day: string): Promise<void> {
+    const data = readRaw();
+    writeRaw({
+      ...data,
+      entries: data.entries.map((e) =>
+        e.id === id && dayKey(e.timestamp) !== day
+          ? { ...e, timestamp: timestampForDay(day), updatedAt: Date.now() }
+          : e
+      ),
     });
     triggerSync();
   },

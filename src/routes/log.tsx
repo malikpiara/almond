@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { describeBalance, formatDay } from '@/utils/utils';
 import { BalanceSlider } from '@/components/balance';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { DayControl } from '@/components/day-control';
 
 export function Log() {
   const { id } = useParams({ from: '/log/$id' });
@@ -75,6 +77,23 @@ export function Log() {
     else navigate({ to: '/today' });
   }
 
+  // Move this log to another day. Pending edits are flushed first so they
+  // travel with it; a merge lands you on the log that absorbed this one.
+  async function move(day: string) {
+    if (dirty) {
+      setDirty(false);
+      await store.updatePersonLog(id, { theirShare, notes });
+    }
+    const result = await store.movePersonLog(id, day);
+    if (result.id !== id) {
+      toast(`Merged into ${formatDay(day)}’s log`);
+      navigate({ to: '/log/$id', params: { id: result.id }, replace: true });
+      return;
+    }
+    setLog(result);
+    toast(`Moved to ${formatDay(day)}`);
+  }
+
   async function remove() {
     setDirty(false);
     await store.deletePersonLog(id);
@@ -103,8 +122,13 @@ export function Log() {
 
       {log && (
         <>
-          <p className='-mt-4 text-sm text-gray-500'>
-            {formatDay(log.day)} ·{' '}
+          <div className='-mt-4 flex items-center gap-1 text-sm text-gray-500'>
+            <DayControl
+              value={log.day}
+              onChange={(day) => void move(day)}
+              armOnTap
+            />
+            <span>·</span>
             <Link
               to='/people/$name'
               params={{ name: log.person }}
@@ -112,7 +136,7 @@ export function Log() {
             >
               View {log.person}
             </Link>
-          </p>
+          </div>
 
           <section className='flex flex-col gap-3'>
             <div className='flex flex-col gap-1'>

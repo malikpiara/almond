@@ -6,12 +6,14 @@ import type { PersonLog } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PersonPicker } from '@/components/person-picker';
 import { BalanceGlyph } from '@/components/balance';
-import { dayKey, formatDay } from '@/utils/utils';
+import { formatDay, todayKey } from '@/utils/utils';
+import { DayControl } from '@/components/day-control';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 
 export function Today() {
-  // The day this screen was opened on, fixed for its lifetime.
-  const [today] = useState(() => dayKey(Date.now()));
+  // The day being logged. Opens on the calendar day and can be moved, for
+  // the past-midnight case where "today" is really yesterday.
+  const [today, setToday] = useState(todayKey);
   const [logs, setLogs] = useState<PersonLog[] | null>(null);
   const [known, setKnown] = useState<string[]>([]);
   const [mentioned, setMentioned] = useState<string[]>([]);
@@ -77,8 +79,9 @@ export function Today() {
         >
           <ArrowLeft className='h-5 w-5' />
         </Link>
-        <h1 className='text-2xl font-medium tracking-tight text-balance text-gray-800'>
-          Today
+        {/* The title is the day control: tap it to log for another day. */}
+        <h1 className='min-w-0 flex-1 text-2xl font-medium tracking-tight text-balance text-gray-800'>
+          <DayControl value={today} onChange={setToday} />
         </h1>
       </div>
 
@@ -91,7 +94,9 @@ export function Today() {
 
       {suggestions.length > 0 && (
         <div className='flex flex-wrap items-center gap-2'>
-          <span className='text-sm text-gray-500'>In today’s entries:</span>
+          <span className='text-sm text-gray-500'>
+            {today === todayKey() ? 'In today’s entries:' : 'In that day’s entries:'}
+          </span>
           {suggestions.map((n) => (
             <Button
               key={n}

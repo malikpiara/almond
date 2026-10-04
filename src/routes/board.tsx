@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import * as z from 'zod';
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { formatEntryDate } from '@/utils/utils';
+import { dayKey, formatDay, todayKey } from '@/utils/utils';
 import { Link, useParams, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontalIcon, ArrowLeft, Feather } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import { Field, FieldError, FieldGroup } from '@/components/ui/field';
 import { InputGroup, InputGroupTextarea } from '@/components/ui/input-group';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -26,6 +27,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { DayControl } from '@/components/day-control';
+import { setLateNightBoundary, useLateNightBoundary } from '@/lib/prototype';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useSwipeBack } from '@/hooks/use-swipe-back';
 import { useSendMorph, canMorph } from '@/hooks/use-send-morph';
@@ -61,6 +64,12 @@ export function Board() {
 
   const [optionsEntry, setOptionsEntry] = useState<Entry | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // The day the next entry is filed under. Defaults to today and snaps back
+  // after each save, so a late-night "yesterday" never leaks into tomorrow.
+  const [writingDay, setWritingDay] = useState(todayKey);
+  // Prototype switch (see lib/prototype.ts). Subscribing here re-renders the
+  // entry dates when the day boundary flips.
+  const lateNight = useLateNightBoundary();
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   // Defer the entry-options Drawer (vaul) past first paint: its scroll setup
   // forces layout, which otherwise lands inside the open transition. Mounting it
@@ -111,6 +120,12 @@ export function Board() {
     setEntries(await store.getEntries(boardId));
   }
 
+  async function moveEntry(id: string, day: string) {
+    await store.setEntryDay(id, day);
+    setEntries(await store.getEntries(boardId));
+    toast(`Moved to ${formatDay(day)}`);
+  }
+
   // The plain entrance: a brief `.animate-entry-appear` fade on the new row.
   // Used on desktop and as the reduced-motion / unsupported fallback for mobile.
   function flashEntry(id: string) {
@@ -125,8 +140,10 @@ export function Board() {
     const content = data.description;
     try {
       // Save first — instant reward, no waiting on the AI.
-      const entry = await store.createEntry(boardId, content);
+      const day = writingDay;
+      const entry = await store.createEntry(boardId, content, undefined, day);
       const next = await store.getEntries(boardId);
+      setWritingDay(todayKey());
 
       // Mobile: morph the typed text from the composer up into its new row
       // (Telegram's send-message morph). Desktop and reduced-motion keep the
@@ -158,7 +175,7 @@ export function Board() {
         form.reset();
       }
 
-      toast('Entry saved!');
+      toast(day === todayKey() ? 'Entry saved!' : `Saved to ${formatDay(day)}`);
 
       // Enrich with people/places in the background; patch the entry when it
       // lands. extractEntities never throws (empty on failure).
@@ -197,6 +214,40 @@ export function Board() {
     );
   }
 
+  // Which day the next entry is filed under. Quiet by default ("Today");
+  // becomes the thing to reach for when it's past midnight and that's wrong.
+  const writingDayTrigger = (
+    <DayControl
+      value={writingDay}
+      onChange={setWritingDay}
+      className='text-sm text-gray-500'
+    />
+  );
+
+  // An entry's date is the handle for moving it.
+  const entryDate = (entry: Entry) => (
+    <DayControl
+      value={dayKey(entry.timestamp)}
+      onChange={(day) => void moveEntry(entry.id, day)}
+      className='text-sm text-gray-400'
+      armOnTap
+    />
+  );
+
+  const prototypeMenu = (
+    <>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel className='text-gray-500'>Prototype</DropdownMenuLabel>
+      <DropdownMenuCheckboxItem
+        checked={lateNight}
+        onCheckedChange={(c) => setLateNightBoundary(c === true)}
+        className='cursor-pointer'
+      >
+        Day ends at 4am
+      </DropdownMenuCheckboxItem>
+    </>
+  );
+
   const journalMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -234,6 +285,7 @@ export function Board() {
         >
           Delete this journal
         </DropdownMenuItem>
+        {prototypeMenu}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -295,9 +347,7 @@ export function Board() {
                 {entry.content}
               </p>
               <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
-                <span>
-                  {formatEntryDate(entry.timestamp)}
-                </span>
+                {entryDate(entry)}
                 <Button
                   variant='ghost'
                   size='icon'
@@ -329,11 +379,14 @@ export function Board() {
                     {fieldState.error.message}
                   </p>
                 )}
-                {isAnalyzing && (
-                  <p className='px-3 pb-1 text-sm text-gray-500'>
-                    Tagging people and places…
-                  </p>
-                )}
+                <div className='flex items-center justify-between px-3 pb-1'>
+                  {writingDayTrigger}
+                  {isAnalyzing && (
+                    <p className='text-sm text-gray-500'>
+                      Tagging people and places…
+                    </p>
+                  )}
+                </div>
                 <div className='flex items-end gap-1.5 rounded-3xl border border-gray-200 bg-white py-1.5 pl-4 pr-1.5 focus-within:ring-2 focus-within:ring-gray-300'>
                   <textarea
                     {...field}
@@ -479,6 +532,7 @@ export function Board() {
           <Button type='submit' variant='outline' form='form-rhf-demo'>
             Submit
           </Button>
+          <span className='self-center'>{writingDayTrigger}</span>
           {isAnalyzing && (
             <span className='text-sm text-gray-500 self-center'>
               Tagging people and places…
@@ -500,9 +554,7 @@ export function Board() {
                 {entry.content}
               </p>
               <div className='mt-2 flex items-center justify-between text-sm text-gray-400'>
-                <span>
-                  {formatEntryDate(entry.timestamp)}
-                </span>
+                {entryDate(entry)}
                 <DropdownMenu modal={true}>
                   <DropdownMenuTrigger asChild>
                     <Button

@@ -150,10 +150,11 @@ function mergeRecords<T extends { id: string; isDeleted: boolean }>(
 }
 
 /**
- * Merge two journals into one. Boards and entries are immutable (create +
- * soft-delete only), so their creation time is enough. Person logs are edited
- * after creation (balance, notes), so the newer `updatedAt` wins; a deletion
- * still beats any edit.
+ * Merge two journals into one. Boards are immutable (create + soft-delete
+ * only), so their creation time is enough. Entries and person logs are edited
+ * after creation (an entry's day can move; a log's balance and notes), so the
+ * newer `updatedAt` wins; a deletion still beats any edit. Older entries have
+ * no `updatedAt` and fall back to their timestamp, which is what it used to be.
  */
 export function merge(a: UserData, b: UserData): UserData {
   return {
@@ -161,7 +162,7 @@ export function merge(a: UserData, b: UserData): UserData {
     entries: mergeRecords(
       a.entries,
       b.entries,
-      (x: Entry) => x.timestamp,
+      (x: Entry) => x.updatedAt ?? x.timestamp,
       combineEntry
     ),
     personLogs: mergeRecords(

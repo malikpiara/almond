@@ -1,4 +1,5 @@
-import { isToday, isYesterday, isThisYear, format } from 'date-fns';
+import { isThisYear, format, endOfDay, addDays } from 'date-fns';
+import { dayStartsAtHour } from '@/lib/prototype';
 import { store } from '@/lib/store';
 import { encryptData, decryptData } from '@/lib/crypto';
 import { ForwardCompatError } from '@/lib/schema';
@@ -7,22 +8,55 @@ import { ForwardCompatError } from '@/lib/schema';
 // the day they happened ("Yesterday", "3 March"), not elapsed time
 // ("17 hours ago"), so we frame by calendar: Today / Yesterday / "3 March"
 // (this year) / "3 March 2024" (older).
+//
+// A day can start later than midnight (see prototype.ts): a 01:30 entry then
+// still belongs to the evening before. Everything calendar-shaped goes through
+// dayKey so that shift is applied in exactly one place.
+const shiftMs = () => dayStartsAtHour() * 3_600_000;
+
 export function formatEntryDate(timestamp: number): string {
-  const date = new Date(timestamp);
-  if (isToday(date)) return 'Today';
-  if (isYesterday(date)) return 'Yesterday';
-  return isThisYear(date) ? format(date, 'd MMMM') : format(date, 'd MMMM yyyy');
+  return formatDay(dayKey(timestamp));
 }
 
 // Person logs belong to a local calendar day, stored as yyyy-MM-dd so it
 // never shifts with the device's timezone.
 export function dayKey(timestamp: number): string {
-  return format(new Date(timestamp), 'yyyy-MM-dd');
+  return format(new Date(timestamp - shiftMs()), 'yyyy-MM-dd');
 }
 
 export function formatDay(day: string): string {
+  if (day === todayKey()) return 'Today';
+  if (day === yesterdayKey()) return 'Yesterday';
+  const date = new Date(dayStart(day));
+  return isThisYear(date) ? format(date, 'd MMMM') : format(date, 'd MMMM yyyy');
+}
+
+/** Local midnight of a yyyy-MM-dd day, as a timestamp. */
+export function dayStart(day: string): number {
   const [y, m, d] = day.split('-').map(Number);
-  return formatEntryDate(new Date(y, m - 1, d).getTime());
+  return new Date(y, m - 1, d).getTime();
+}
+
+export function todayKey(): string {
+  return dayKey(Date.now());
+}
+
+export function yesterdayKey(): string {
+  return shiftDay(todayKey(), -1);
+}
+
+/** Step a yyyy-MM-dd day by whole days. */
+export function shiftDay(day: string, days: number): string {
+  return format(addDays(new Date(dayStart(day)), days), 'yyyy-MM-dd');
+}
+
+// An entry filed under a chosen day (rather than the day it was written on)
+// lands at the end of that day: picking a day says "this belongs to the end
+// of that day", so it sorts after everything written on it. Choosing today
+// just means now.
+export function timestampForDay(day: string): number {
+  if (day === todayKey()) return Date.now();
+  return endOfDay(new Date(dayStart(day))).getTime() + shiftMs();
 }
 
 // theirShare is how much of the talking the other person did, 0–100. It's a
